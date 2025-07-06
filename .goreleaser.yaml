@@ -52,21 +52,19 @@ archives:
 
 brews:
   - name: list-codes
-    tap:
+    repository:
       owner: luckpoint
       name: homebrew-list-codes
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_author:
       name: github-actions[bot]
       email: github-actions[bot]@users.noreply.github.com
-    folder: Formula
+    directory: Formula
     homepage: "https://github.com/luckpoint/list-codes"
     description: "Source Code Analysis Assistant for LLMs - A CLI tool to collect and format source code for LLM analysis"
     license: "MIT"
     test: |
       system "#{bin}/list-codes", "--version"
-    install: |
-      bin.install "list-codes"
 
 changelog:
   sort: asc
