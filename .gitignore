@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-list-codes
+/list-codes
 
 # Test binary, built with `go test -c`
 *.test
@@ -28,3 +28,5 @@ godoc/
 
 # OS-specific
 .DS_Store
+# Added by goreleaser init:
+dist/
