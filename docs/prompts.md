@@ -1,237 +1,237 @@
-# LLM向けプロンプトテンプレート集
+# LLM Prompt Templates
 
-このドキュメントでは、`list-codes`ツールの`--prompt`オプションで使用できるプロンプトテンプレートを定義しています。
+This document defines prompt templates that can be used with the `--prompt` option of the `list-codes` tool.
 
-## 使用方法
+## Usage
 
 ```bash
 ./list-codes --prompt explain
 ./list-codes --prompt find-bugs
 ./list-codes --prompt refactor
-# その他のプロンプト名...
+# Other prompt names...
 ```
 
-## プロンプトテンプレート一覧
+## Prompt Template List
 
-### 1. explain（概要説明）
+### 1. explain (Project Overview)
 ```
-以下のプロジェクトのコードベースを分析し、以下の項目について説明してください：
+Please analyze the following codebase and explain the following aspects:
 
-1. **プロジェクトの目的と主要機能**
-2. **アーキテクチャと設計パターン**
-3. **主要なコンポーネントとその役割**
-4. **技術スタックと依存関係**
-5. **コードの構造と組織化**
+1. **Project purpose and main features**
+2. **Architecture and design patterns**
+3. **Key components and their roles**
+4. **Technology stack and dependencies**
+5. **Code structure and organization**
 
-技術的でない人にも理解できるよう、簡潔で分かりやすい説明をお願いします。
-```
-
-### 2. find-bugs（バグ検出）
-```
-以下のコードベースを詳細に分析し、潜在的なバグ、エラー、問題を特定してください：
-
-1. **論理エラーや実装上の問題**
-2. **メモリリークや性能問題**
-3. **エラーハンドリングの不備**
-4. **型安全性の問題**
-5. **境界値やエッジケースの処理不備**
-6. **競合状態やスレッドセーフティの問題**
-
-各問題について、該当箇所、問題の詳細、修正案を提示してください。
+Please provide clear and concise explanations that can be understood by non-technical people as well.
 ```
 
-### 3. refactor（リファクタリング提案）
+### 2. find-bugs (Bug Detection)
 ```
-以下のコードベースを分析し、リファクタリングの機会を特定してください：
+Please analyze the following codebase in detail and identify potential bugs, errors, and issues:
 
-1. **コードの重複排除**
-2. **関数やクラスの責任分離**
-3. **命名の改善**
-4. **複雑すぎる関数の分割**
-5. **デザインパターンの適用機会**
-6. **パフォーマンス改善**
+1. **Logic errors and implementation problems**
+2. **Memory leaks and performance issues**
+3. **Inadequate error handling**
+4. **Type safety issues**
+5. **Boundary value and edge case handling problems**
+6. **Race conditions and thread safety issues**
 
-各提案について、現在の問題点、改善後の利点、実装の優先度を示してください。
-```
-
-### 4. security（セキュリティ監査）
-```
-以下のコードベースをセキュリティの観点から分析し、脆弱性やセキュリティリスクを特定してください：
-
-1. **入力値検証の不備**
-2. **SQLインジェクションやXSSの可能性**
-3. **認証・認可の問題**
-4. **機密情報の露出**
-5. **不適切な権限設定**
-6. **暗号化やハッシュ化の不備**
-
-各問題について、リスクレベル、影響範囲、対策方法を提示してください。
+For each issue, please provide the location, detailed description of the problem, and suggested fixes.
 ```
 
-### 5. optimize（パフォーマンス最適化）
+### 3. refactor (Refactoring Suggestions)
 ```
-以下のコードベースを分析し、パフォーマンス最適化の機会を特定してください：
+Please analyze the following codebase and identify refactoring opportunities:
 
-1. **計算量の改善可能性**
-2. **メモリ使用量の最適化**
-3. **I/O操作の効率化**
-4. **キャッシュの活用機会**
-5. **並列処理の導入可能性**
-6. **ボトルネックとなりうる箇所**
+1. **Code duplication elimination**
+2. **Function and class responsibility separation**
+3. **Naming improvements**
+4. **Breaking down overly complex functions**
+5. **Design pattern application opportunities**
+6. **Performance improvements**
 
-各最適化について、現在の問題、改善案、期待される効果を示してください。
-```
-
-### 6. test（テスト提案）
-```
-以下のコードベースを分析し、テストの改善提案を行ってください：
-
-1. **テストカバレッジの不足箇所**
-2. **エッジケースのテスト不足**
-3. **統合テストの必要性**
-4. **テストコードの品質改善**
-5. **モックやスタブの活用機会**
-6. **テストの自動化改善**
-
-具体的なテストケースの例も合わせて提示してください。
+For each suggestion, please indicate the current problems, benefits after improvement, and implementation priority.
 ```
 
-### 7. document（ドキュメント改善）
+### 4. security (Security Audit)
 ```
-以下のコードベースを分析し、ドキュメントの改善提案を行ってください：
+Please analyze the following codebase from a security perspective and identify vulnerabilities and security risks:
 
-1. **不足している仕様書や設計書**
-2. **コメントが不足している複雑な処理**
-3. **API仕様書の充実度**
-4. **README.mdの改善点**
-5. **コード内ドキュメントの品質**
-6. **使用例やチュートリアルの必要性**
+1. **Input validation deficiencies**
+2. **SQL injection and XSS possibilities**
+3. **Authentication and authorization issues**
+4. **Exposure of sensitive information**
+5. **Inappropriate permission settings**
+6. **Encryption and hashing deficiencies**
 
-ユーザーと開発者の両方の視点から提案してください。
-```
-
-### 8. migrate（技術移行提案）
-```
-以下のコードベースを分析し、技術スタックの移行や更新の提案を行ってください：
-
-1. **古いライブラリやフレームワークの更新**
-2. **より適切な技術選択の提案**
-3. **言語バージョンのアップデート**
-4. **アーキテクチャの現代化**
-5. **移行に伴うリスクと利点**
-6. **段階的な移行計画**
-
-移行の複雑さとメリットを評価してください。
+For each issue, please provide risk level, impact scope, and countermeasures.
 ```
 
-### 9. scale（スケーラビリティ分析）
+### 5. optimize (Performance Optimization)
 ```
-以下のコードベースをスケーラビリティの観点から分析してください：
+Please analyze the following codebase and identify performance optimization opportunities:
 
-1. **現在のアーキテクチャの限界**
-2. **ボトルネックとなりうる箇所**
-3. **水平・垂直スケーリングの対応**
-4. **データベース設計の拡張性**
-5. **マイクロサービス化の可能性**
-6. **負荷分散の仕組み**
+1. **Computational complexity improvement possibilities**
+2. **Memory usage optimization**
+3. **I/O operation efficiency**
+4. **Cache utilization opportunities**
+5. **Parallel processing introduction possibilities**
+6. **Potential bottlenecks**
 
-大規模運用に向けた改善提案を行ってください。
-```
-
-### 10. maintain（保守性改善）
-```
-以下のコードベースの保守性を分析し、改善提案を行ってください：
-
-1. **コードの可読性向上**
-2. **モジュール間の依存関係整理**
-3. **設定管理の改善**
-4. **ログとエラー処理の標準化**
-5. **開発ワークフローの改善**
-6. **技術的負債の特定と対処**
-
-長期的な保守性向上の観点から提案してください。
+For each optimization, please indicate current problems, improvement proposals, and expected effects.
 ```
 
-### 11. api-design（API設計レビュー）
+### 6. test (Testing Suggestions)
 ```
-以下のコードベースのAPI設計を分析し、改善提案を行ってください：
+Please analyze the following codebase and provide testing improvement suggestions:
 
-1. **RESTful設計の妥当性**
-2. **エンドポイント設計の一貫性**
-3. **リクエスト・レスポンス形式**
-4. **エラーレスポンスの標準化**
-5. **バージョニング戦略**
-6. **APIドキュメントの充実度**
+1. **Areas lacking test coverage**
+2. **Insufficient edge case testing**
+3. **Need for integration tests**
+4. **Test code quality improvements**
+5. **Mock and stub utilization opportunities**
+6. **Test automation improvements**
 
-使いやすく一貫性のあるAPI設計を目指した提案をしてください。
-```
-
-### 12. patterns（デザインパターン適用）
-```
-以下のコードベースを分析し、適用可能なデザインパターンを提案してください：
-
-1. **現在のコード構造の問題点**
-2. **適用可能なGoFパターン**
-3. **アーキテクチャパターンの活用**
-4. **関数型プログラミングパターン**
-5. **並行処理パターン**
-6. **エラーハンドリングパターン**
-
-各パターンの適用箇所と期待される効果を示してください。
+Please also provide specific test case examples.
 ```
 
-### 13. review（コードレビュー）
+### 7. document (Documentation Improvement)
 ```
-以下のコードベースに対して包括的なコードレビューを実施してください：
+Please analyze the following codebase and provide documentation improvement suggestions:
 
-1. **コーディング規約の遵守状況**
-2. **ベストプラクティスの適用度**
-3. **コードの品質と一貫性**
-4. **潜在的な改善点**
-5. **チーム開発での課題**
-6. **学習すべき技術や手法**
+1. **Missing specifications and design documents**
+2. **Complex processes lacking comments**
+3. **API specification completeness**
+4. **README.md improvement points**
+5. **Code documentation quality**
+6. **Need for usage examples and tutorials**
 
-建設的で具体的なフィードバックを提供してください。
-```
-
-### 14. architecture（アーキテクチャ分析）
-```
-以下のコードベースのアーキテクチャを分析し、評価・提案を行ってください：
-
-1. **現在のアーキテクチャの特徴と評価**
-2. **レイヤード構造の妥当性**
-3. **依存関係の方向性**
-4. **モジュール分割の適切性**
-5. **設計原則（SOLID等）の適用状況**
-6. **将来の拡張性への対応**
-
-より良いアーキテクチャに向けた具体的な提案をしてください。
+Please provide suggestions from both user and developer perspectives.
 ```
 
-### 15. deploy（デプロイ・運用改善）
+### 8. migrate (Technology Migration Suggestions)
 ```
-以下のコードベースのデプロイメントと運用面を分析し、改善提案を行ってください：
+Please analyze the following codebase and provide suggestions for technology stack migration or updates:
 
-1. **CI/CDパイプラインの改善**
-2. **デプロイメント戦略の最適化**
-3. **監視とログの充実**
-4. **障害対応とロールバック**
-5. **環境管理の改善**
-6. **運用自動化の機会**
+1. **Updates for outdated libraries and frameworks**
+2. **Suggestions for more appropriate technology choices**
+3. **Language version updates**
+4. **Architecture modernization**
+5. **Risks and benefits of migration**
+6. **Phased migration plan**
 
-DevOpsの観点から実践的な改善案を提示してください。
+Please evaluate the complexity and benefits of migration.
 ```
 
-## プロンプトのカスタマイズ
+### 9. scale (Scalability Analysis)
+```
+Please analyze the following codebase from a scalability perspective:
 
-上記のテンプレートは基本形です。プロジェクトの特性に応じてカスタマイズして使用することを推奨します。
+1. **Limitations of current architecture**
+2. **Potential bottlenecks**
+3. **Horizontal and vertical scaling support**
+4. **Database design scalability**
+5. **Microservices architecture possibilities**
+6. **Load balancing mechanisms**
 
-### カスタマイズ例
+Please provide improvement suggestions for large-scale operations.
+```
+
+### 10. maintain (Maintainability Improvement)
+```
+Please analyze the maintainability of the following codebase and provide improvement suggestions:
+
+1. **Code readability improvements**
+2. **Inter-module dependency organization**
+3. **Configuration management improvements**
+4. **Standardization of logging and error handling**
+5. **Development workflow improvements**
+6. **Technical debt identification and resolution**
+
+Please provide suggestions from a long-term maintainability perspective.
+```
+
+### 11. api-design (API Design Review)
+```
+Please analyze the API design of the following codebase and provide improvement suggestions:
+
+1. **RESTful design validity**
+2. **Endpoint design consistency**
+3. **Request and response formats**
+4. **Error response standardization**
+5. **Versioning strategy**
+6. **API documentation completeness**
+
+Please provide suggestions aimed at usable and consistent API design.
+```
+
+### 12. patterns (Design Pattern Application)
+```
+Please analyze the following codebase and suggest applicable design patterns:
+
+1. **Problems with current code structure**
+2. **Applicable GoF patterns**
+3. **Architectural pattern utilization**
+4. **Functional programming patterns**
+5. **Concurrency patterns**
+6. **Error handling patterns**
+
+Please indicate application points and expected effects for each pattern.
+```
+
+### 13. review (Code Review)
+```
+Please conduct a comprehensive code review of the following codebase:
+
+1. **Compliance with coding conventions**
+2. **Application of best practices**
+3. **Code quality and consistency**
+4. **Potential improvement points**
+5. **Issues in team development**
+6. **Technologies and techniques to learn**
+
+Please provide constructive and specific feedback.
+```
+
+### 14. architecture (Architecture Analysis)
+```
+Please analyze the architecture of the following codebase and provide evaluation and suggestions:
+
+1. **Characteristics and evaluation of current architecture**
+2. **Validity of layered structure**
+3. **Direction of dependencies**
+4. **Appropriateness of module division**
+5. **Application status of design principles (SOLID, etc.)**
+6. **Support for future extensibility**
+
+Please provide specific suggestions for better architecture.
+```
+
+### 15. deploy (Deployment and Operations Improvement)
+```
+Please analyze the deployment and operational aspects of the following codebase and provide improvement suggestions:
+
+1. **CI/CD pipeline improvements**
+2. **Deployment strategy optimization**
+3. **Monitoring and logging enhancements**
+4. **Incident response and rollback**
+5. **Environment management improvements**
+6. **Operations automation opportunities**
+
+Please provide practical improvement suggestions from a DevOps perspective.
+```
+
+## Prompt Customization
+
+The above templates are basic forms. It is recommended to customize them according to the characteristics of your project.
+
+### Customization Examples
 
 ```bash
-# 特定の観点に絞った分析
-./list-codes --prompt "以下のGoコードでゴルーチンの使用法を分析し、並行処理の改善提案をしてください："
+# Analysis focused on specific aspects
+./list-codes --prompt "Please analyze the usage of goroutines in the following Go code and suggest improvements for concurrent processing:"
 
-# 学習目的の分析
-./list-codes --prompt "初心者がこのコードから学べる設計パターンや技術要素を教えてください："
+# Educational analysis
+./list-codes --prompt "Please explain the design patterns and technical elements that beginners can learn from this code:"
 ```
