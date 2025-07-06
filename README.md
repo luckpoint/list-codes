@@ -12,8 +12,14 @@ It streamlines tasks like code reviews, documentation generation, and bug detect
 
 ## Installation
 
+### Option 1: Download Binary (Recommended)
+
+Download the latest binary for your platform from the [releases page](https://github.com/luckpoint/list-codes/releases).
+
+### Option 2: Go Install
+
 ```bash
-go install github.com/luckpoint/list-codes/cmd/list-codes@v0.1.3
+go install github.com/luckpoint/list-codes/cmd/list-codes@latest
 ```
 
 **Note:** If you install with `go install`, you need to have `$GOPATH/bin` (or `$HOME/go/bin`) in your system's `PATH`.
