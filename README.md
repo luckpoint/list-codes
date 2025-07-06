@@ -12,11 +12,18 @@ It streamlines tasks like code reviews, documentation generation, and bug detect
 
 ## Installation
 
-### Option 1: Download Binary (Recommended)
+### Option 1: Homebrew (macOS/Linux) - Recommended
+
+```bash
+brew tap luckpoint/list-codes
+brew install list-codes
+```
+
+### Option 2: Download Binary
 
 Download the latest binary for your platform from the [releases page](https://github.com/luckpoint/list-codes/releases).
 
-### Option 2: Go Install
+### Option 3: Go Install
 
 ```bash
 go install github.com/luckpoint/list-codes/cmd/list-codes@latest

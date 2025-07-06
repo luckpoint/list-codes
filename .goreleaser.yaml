@@ -50,6 +50,23 @@ archives:
       - goos: windows
         formats: [zip]
 
+brews:
+  - name: list-codes
+    tap:
+      owner: luckpoint
+      name: homebrew-list-codes
+    commit_author:
+      name: github-actions[bot]
+      email: github-actions[bot]@users.noreply.github.com
+    folder: Formula
+    homepage: "https://github.com/luckpoint/list-codes"
+    description: "Source Code Analysis Assistant for LLMs - A CLI tool to collect and format source code for LLM analysis"
+    license: "MIT"
+    test: |
+      system "#{bin}/list-codes", "--version"
+    install: |
+      bin.install "list-codes"
+
 changelog:
   sort: asc
   filters:
@@ -66,7 +83,13 @@ release:
     
     Download the appropriate binary for your platform from the assets above.
     
-    Alternatively, you can install using go install:
+    **Homebrew (macOS/Linux):**
+    ```bash
+    brew tap luckpoint/list-codes
+    brew install list-codes
+    ```
+    
+    **Go install:**
     ```bash
     go install github.com/luckpoint/list-codes/cmd/list-codes@latest
     ```
