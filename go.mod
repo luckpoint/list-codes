@@ -1,4 +1,4 @@
-module myutilsport
+module github.com/luckpoint/list-codes
 
 go 1.23.4
 

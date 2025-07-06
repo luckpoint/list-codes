@@ -13,7 +13,7 @@ It streamlines tasks like code reviews, documentation generation, and bug detect
 ## Installation
 
 ```bash
-go install github.com/luckpoint/list-codes/go-src/cmd/listcodes@latest
+go install github.com/luckpoint/list-codes/cmd/listcodes@latest
 ```
 
 **Note:** If you install with `go install`, you need to have `$GOPATH/bin` (or `$HOME/go/bin`) in your system's `PATH`.
