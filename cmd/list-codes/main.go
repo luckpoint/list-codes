@@ -21,6 +21,7 @@ var (
 	excludes   []string
 	prompt     string
 	langFlag   string
+	version    = "dev" // Will be overridden by build flags
 )
 
 func init() {
@@ -57,6 +58,7 @@ func init() {
 	rootCmd.PersistentFlags().Int64Var(&utils.MaxFileSizeBytes, "max-file-size", utils.MaxFileSizeBytesDefault, "Maximum file size in bytes to include in the summary")
 	rootCmd.PersistentFlags().StringVarP(&prompt, "prompt", "p", "", "Prompt template name to prepend to output (use predefined templates only)")
 	rootCmd.PersistentFlags().StringVar(&langFlag, "lang", "", "Force language (ja|en) instead of auto-detection")
+	rootCmd.PersistentFlags().BoolP("version", "v", false, "Show version information")
 
 	// Register custom completion for --prompt flag
 	rootCmd.RegisterFlagCompletionFunc("prompt", promptCompletion)
@@ -68,6 +70,11 @@ var rootCmd = &cobra.Command{
 	Use:   "list-codes",
 	// Short and Long will be set dynamically based on locale
 	Run: func(cmd *cobra.Command, args []string) {
+		// Handle version flag
+		if versionFlag, _ := cmd.Flags().GetBool("version"); versionFlag {
+			fmt.Println("list-codes version", version)
+			return
+		}
 		excludeNames := make(map[string]struct{})
 		for k := range utils.DefaultExcludeNames {
 			excludeNames[k] = struct{}{}
