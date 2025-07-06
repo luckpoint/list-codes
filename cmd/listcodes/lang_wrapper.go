@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"myutilsport/utils"
+	"github.com/luckpoint/list-codes/utils"
 )
 
 // parseLanguageFlag manually parses the --lang flag before Cobra processes it

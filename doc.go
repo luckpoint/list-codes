@@ -25,4 +25,4 @@
 // The tool automatically detects project languages based on signature files (like go.mod, package.json)
 // and file extensions, then processes relevant source files while excluding test files and
 // commonly ignored directories.
-package myutilsport
+package main
