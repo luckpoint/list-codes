@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -346,7 +345,7 @@ func GetPromptI18n(promptParam string, debugMode bool) (string, error) {
 		return "", nil
 	}
 
-	// Check if it's a predefined template
+	// Only accept predefined templates
 	var templates map[string]string
 	isJa := IsJapanese()
 	PrintDebug(fmt.Sprintf("Language check: IsJapanese=%v, currentLang=%v", isJa, GetCurrentLanguage()), debugMode)
@@ -363,17 +362,26 @@ func GetPromptI18n(promptParam string, debugMode bool) (string, error) {
 		return template, nil
 	}
 
-	// Check if it's a file path
-	if _, err := os.Stat(promptParam); err == nil {
-		PrintDebug(fmt.Sprintf("Reading prompt from file: %s", promptParam), debugMode)
-		content, err := os.ReadFile(promptParam)
-		if err != nil {
-			return "", fmt.Errorf("failed to read prompt file '%s': %v", promptParam, err)
-		}
-		return strings.TrimSpace(string(content)), nil
+	// Return error if the prompt is not in predefined templates
+	availablePrompts := make([]string, 0, len(templates))
+	for key := range templates {
+		availablePrompts = append(availablePrompts, key)
 	}
+	return "", fmt.Errorf("unknown prompt template '%s'. Available templates: %s", promptParam, strings.Join(availablePrompts, ", "))
+}
 
-	// Treat as custom prompt text
-	PrintDebug("Using custom prompt text", debugMode)
-	return promptParam, nil
+// GetAvailablePrompts returns a list of available prompt template names
+func GetAvailablePrompts() []string {
+	var templates map[string]string
+	if IsJapanese() {
+		templates = PromptTemplatesJA
+	} else {
+		templates = PromptTemplatesEN
+	}
+	
+	prompts := make([]string, 0, len(templates))
+	for key := range templates {
+		prompts = append(prompts, key)
+	}
+	return prompts
 }

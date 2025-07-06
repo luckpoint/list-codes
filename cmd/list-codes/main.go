@@ -55,8 +55,11 @@ func init() {
 	rootCmd.PersistentFlags().StringSliceVarP(&includes, "include", "i", []string{}, "Folder path to include (repeatable)")
 	rootCmd.PersistentFlags().StringSliceVarP(&excludes, "exclude", "e", []string{}, "Folder path to exclude (repeatable)")
 	rootCmd.PersistentFlags().Int64Var(&utils.MaxFileSizeBytes, "max-file-size", utils.MaxFileSizeBytesDefault, "Maximum file size in bytes to include in the summary")
-	rootCmd.PersistentFlags().StringVarP(&prompt, "prompt", "p", "", "Prompt template name, file path, or custom prompt text to prepend to output")
+	rootCmd.PersistentFlags().StringVarP(&prompt, "prompt", "p", "", "Prompt template name to prepend to output (use predefined templates only)")
 	rootCmd.PersistentFlags().StringVar(&langFlag, "lang", "", "Force language (ja|en) instead of auto-detection")
+
+	// Register custom completion for --prompt flag
+	rootCmd.RegisterFlagCompletionFunc("prompt", promptCompletion)
 
 	rootCmd.AddCommand(completionCmd)
 }
@@ -161,6 +164,13 @@ func joinSet(m map[string]struct{}) string {
 	}
 	sort.Strings(keys)
 	return strings.Join(keys, ", ")
+}
+
+// promptCompletion provides completion for --prompt flag
+func promptCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	availablePrompts := utils.GetAvailablePrompts()
+	sort.Strings(availablePrompts)
+	return availablePrompts, cobra.ShellCompDirectiveNoFileComp
 }
 
 func Execute() {
