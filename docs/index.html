@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>list-codes - Source Code Analysis Assistant for LLMs</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 3rem 0;
+            background: linear-gradient(135deg, #43A6C6 0%, #3A506B 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.8rem;
+            font-weight: 700;
+        }
+        .header p {
+            margin: 1rem 0 0 0;
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        .section {
+            margin: 2.5rem 0;
+        }
+        .section h2 {
+            font-size: 2rem;
+            color: #1B2A41;
+            border-bottom: 3px solid #43A6C6;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .usecase-section {
+            background: #f7f9fc;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 1.2rem;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Consolas', 'SF Mono', monospace;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+        .code-block .comment {
+            color: #68d391;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        .feature {
+            background: #ffffff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .feature h3 {
+            color: #3A506B;
+            margin-top: 0;
+            font-size: 1.3rem;
+        }
+        footer {
+            text-align: center;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>list-codes</h1>
+        <p>Source Code Analysis Assistant for LLMs</p>
+    </div>
+
+    <section class="section">
+        <h2>🎯 About This Tool</h2>
+        <p>
+            <strong>list-codes</strong> is a command-line tool designed to collect and format source code from a specified project, making it easy to analyze with Large Language Models (LLMs).
+        </p>
+        <p>
+            Its main purpose is to output the source code of an entire project or a specific directory as a single text, which can be copied and pasted into an LLM's prompt to streamline tasks like code reviews, documentation generation, and bug detection.
+        </p>
+    </section>
+
+    <section class="section usecase-section">
+        <h2>🚀 Primary Use Case: LLM Integration</h2>
+        <p>
+            The output of this tool is intended to be used directly as input for an LLM.
+        </p>
+        <div class="code-block">
+<span class="comment"># Copy the entire project's source code to the clipboard and paste it into an LLM</span><br>
+list-codes /path/to/your/project | pbcopy<br><br>
+
+<span class="comment"># Request a code review for a specific feature</span><br>
+list-codes --prompt refactor ./src/feature | llm-cli<br><br>
+
+<span class="comment"># Generate a project overview</span><br>
+list-codes --prompt explain . > project_overview.txt<br>
+<span class="comment"># (Then, pass the content of project_overview.txt to the LLM)</span>
+        </div>
+        <p>
+            You can ask the LLM to perform tasks such as:
+        </p>
+        <ul>
+            <li><strong>Understanding a new project:</strong> Quickly grasp the overall picture and architecture.</li>
+            <li><strong>Code review:</strong> Get feedback on bugs, security vulnerabilities, and performance issues.</li>
+            <li><strong>Refactoring suggestions:</strong> Receive ideas for cleaner and more efficient code.</li>
+            <li><strong>Documentation generation:</strong> Create drafts for READMEs and specifications.</li>
+            <li><strong>Test ideas:</strong> Brainstorm test cases to improve coverage.</li>
+        </ul>
+    </section>
+
+    <section class="section">
+        <h2>✨ Key Features</h2>
+        <div class="feature-grid">
+            <div class="feature">
+                <h3>📁 Source Code Collection</h3>
+                <p>Recursively collects source code from the specified directory. It automatically respects <code>.gitignore</code> to exclude unnecessary files like <code>node_modules</code>.</p>
+            </div>
+            <div class="feature">
+                <h3>🔧 Flexible Filtering</h3>
+                <p>Use <code>--exclude</code> and <code>--include</code> options to omit or target specific files and directories.</p>
+            </div>
+            <div class="feature">
+                <h3>🤖 LLM-Ready Prompts</h3>
+                <p>The <code>--prompt</code> option allows you to prepend one of over 15 predefined prompts (e.g., <code>explain</code>, <code>find-bugs</code>) to make your instructions to the LLM simple and precise.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>🛠️ Installation and Usage</h2>
+        <h3>Installation</h3>
+        <h4>Option 1: Homebrew (macOS/Linux) - Recommended</h4>
+        <div class="code-block">
+brew tap luckpoint/list-codes<br>
+brew install list-codes
+        </div>
+        <h4>Option 2: Download Binary</h4>
+        <p>Download the latest binary for your platform from the <a href="https://github.com/luckpoint/list-codes/releases">releases page</a>.</p>
+        <h4>Option 3: Go Install</h4>
+        <div class="code-block">
+go install github.com/luckpoint/list-codes/cmd/list-codes@latest
+        </div>
+        <p>
+            <strong>Note:</strong> If you install with <code>go install</code>, you need to have <code>$GOPATH/bin</code> (or <code>$HOME/go/bin</code>) in your system's <code>PATH</code>.
+        </p>
+
+        <h3>Basic Usage</h3>
+        <div class="code-block">
+<span class="comment"># Display the source code of the current directory to standard output</span><br>
+list-codes<br><br>
+
+<span class="comment"># Specify a project path</span><br>
+list-codes /path/to/your/project<br><br>
+
+<span class="comment"># Target only the `src` and `pkg` directories</span><br>
+list-codes --include "src/**,pkg/**"<br><br>
+
+<span class="comment"># Exclude `*.test.go` files</span><br>
+list-codes --exclude "**/*.test.go"<br><br>
+
+<span class="comment"># Add an 'explain' prompt and output to a file</span><br>
+list-codes --prompt explain --output for_llm.txt
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>📄 Example Output</h2>
+        <p>
+            Below is an example of the output when running <code>list-codes --folder go-src</code>. The project structure and source code are formatted into a single Markdown file.
+        </p>
+        <details>
+            <summary style="cursor: pointer; font-weight: bold;">Click to expand/collapse the example output</summary>
+            <div class="code-block" style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+<pre><code>## Project Structure
+```text
+. (go-src)
+├── .claude
+│   └── settings.local.json
+├── cmd
+│   └── listcodes
+│       ├── lang_wrapper.go
+│       └── main.go
+├── cmd_doc.txt
+├── coverage.html
+├── coverage.out
+├── doc.go
+├── generate_docs.sh
+├── go.mod
+├── go.sum
+├── godoc
+│   ├── cmd.html
+│   ├── main.html
+│   ├── README.md
+│   └── utils.html
+├── GODOC.md
+├── list-codes
+├── main_doc.txt
+├── README.md
+├── test-prompt.txt
+├── utils
+│   ├── config.go
+│   ├── config_test.go
+│   ├── doc.go
+│   ├── file.go
+│   ├── file_test.go
+│   ├── i18n.go
+│   ├── i18n_test.go
+│   ├── language.go
+│   ├── language_test.go
+│   ├── log.go
+│   ├── log_test.go
+│   ├── messages.go
+│   ├── process.go
+│   ├── process_test.go
+│   ├── prompt.go
+│   ├── prompt_i18n.go
+│   ├── prompt_test.go
+│   ├── test_utils.go
+│   ├── utils.go
+│   └── utils_main_test.go
+└── utils_doc.txt
+```
+
+
+## Source Code Files
+
+**File Statistics**: 0.14 MB total (limit: 1.0 MB)
+
+
+### Go
+
+### cmd/listcodes/lang_wrapper.go
+
+```go
+package main
+
+import (
+	"os"
+	"strings"
+
+	"myutilsport/utils"
+)
+
+// parseLanguageFlag manually parses the --lang flag before Cobra processes it
+func parseLanguageFlag() bool {
+	debugMode := false
+	// First check if --debug flag is present
+	for _, arg := range os.Args {
+		if arg == "--debug" {
+			debugMode = true
+			break
+		}
+	}
+	for i, arg := range os.Args {
+		if arg == "--lang" && i+1 < len(os.Args) {
+			langValue := os.Args[i+1]
+			if err := utils.SetLanguage(langValue, debugMode); err != nil {
+				utils.PrintError("Invalid language: " + langValue)
+				os.Exit(1)
+			}
+			// Debug output for verification
+			utils.PrintDebug("Language set to: "+langValue, debugMode)
+			return true
+		}
+		if strings.HasPrefix(arg, "--lang=") {
+			langValue := strings.TrimPrefix(arg, "--lang=")
+			if err := utils.SetLanguage(langValue, debugMode); err != nil {
+				utils.PrintError("Invalid language: " + langValue)
+				os.Exit(1)
+			}
+			// Debug output for verification
+			utils.PrintDebug("Language set to: "+langValue, debugMode)
+			return true
+		}
+	}
+	return false
+}
+```
+
+... and so on ...
+</code></pre>
+            </div>
+        </details>
+    </section>
+
+    <section class="section">
+        <h2>📜 License</h2>
+        <p>
+            This tool is released under the MIT License. For details, please see the LICENSE file in the GitHub repository.
+        </p>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 luckpoint | <a href="https://github.com/luckpoint/list-codes" style="color: #6c757d;">GitHub</a></p>
+    </footer>
+</body>
+</html>

@@ -16,8 +16,7 @@ coverage.html
 # Go vendor directory
 vendor/
 
-# Generated documentation
-docs/
+# Generated documentation (excluding GitHub Pages docs)
 godoc/
 *_doc.txt
 
