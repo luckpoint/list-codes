@@ -55,6 +55,7 @@ brews:
     tap:
       owner: luckpoint
       name: homebrew-list-codes
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_author:
       name: github-actions[bot]
       email: github-actions[bot]@users.noreply.github.com
