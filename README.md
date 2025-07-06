@@ -13,7 +13,7 @@ It streamlines tasks like code reviews, documentation generation, and bug detect
 ## Installation
 
 ```bash
-go install github.com/luckpoint/list-codes/cmd/listcodes@latest
+go install github.com/luckpoint/list-codes/cmd/list-codes@latest
 ```
 
 **Note:** If you install with `go install`, you need to have `$GOPATH/bin` (or `$HOME/go/bin`) in your system's `PATH`.
@@ -60,7 +60,7 @@ list-codes --prompt explain . > project_overview.txt
 To build the executable from the source code, run the following command:
 
 ```bash
-go build -o list-codes ./cmd/listcodes
+go build -o list-codes ./cmd/list-codes
 ```
 
 This will create an executable file named `list-codes` in the project root directory.
