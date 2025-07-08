@@ -334,21 +334,15 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 			return nil
 		}
 
-		processThisFile := false
-		if len(primaryLangs) > 0 {
-			for _, lang := range primaryLangs {
-				if lang == language {
-					processThisFile = true
-					break
-				}
-			}
-		} else if len(fallbackLangs) > 0 {
-			if _, ok := fallbackLangs[language]; ok {
-				processThisFile = true
-			}
-		} else {
-			processThisFile = true
-		}
+		// By default, process all source files even if they belong to languages
+		// that are not part of the detected primaryLangs. This change broadens
+		// coverage so that files like JavaScript alongside HTML are included
+		// without requiring additional configuration. If future behaviour needs
+		// to restrict languages, the caller should introduce an explicit filter
+		// rather than relying on this internal function.
+		_ = primaryLangs   // keep referenced to avoid unused parameter compile errors
+		_ = fallbackLangs
+		processThisFile := true
 
 		if !processThisFile {
 			return nil
