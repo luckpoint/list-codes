@@ -158,23 +158,29 @@ list-codes --prompt explain . > project_overview.txt<br>
 brew tap luckpoint/list-codes<br>
 brew install list-codes
         </div>
-        <h4>Option 2: Download Binary</h4>
-        <p>Download the latest binary for your platform from the <a href="https://github.com/luckpoint/list-codes/releases">releases page</a>.</p>
-        <h4>Option 3: Go Install</h4>
+        <h4>Option 2: Go Install</h4>
         <div class="code-block">
 go install github.com/luckpoint/list-codes/cmd/list-codes@latest
         </div>
         <p>
-            <strong>Note:</strong> If you install with <code>go install</code>, you need to have <code>$GOPATH/bin</code> (or <code>$HOME/go/bin</code>) in your system's <code>PATH</code>.
+            <strong>Note:</strong> You need to have <code>$GOPATH/bin</code> (or <code>$HOME/go/bin</code>) in your system's <code>PATH</code>.
         </p>
+        <h4>Option 3: Download Binary</h4>
+        <p>Download the latest binary for your platform from the <a href="https://github.com/luckpoint/list-codes/releases">releases page</a>.</p>
+        <h4>Option 4: Build from Source</h4>
+        <div class="code-block">
+git clone https://github.com/luckpoint/list-codes.git<br>
+cd list-codes<br>
+go build -o list-codes cmd/list-codes/main.go
+        </div>
 
         <h3>Basic Usage</h3>
         <div class="code-block">
 <span class="comment"># Display the source code of the current directory to standard output</span><br>
 list-codes<br><br>
 
-<span class="comment"># Specify a project path</span><br>
-list-codes /path/to/your/project<br><br>
+<span class="comment"># Specify a project folder</span><br>
+list-codes --folder /path/to/your/project<br><br>
 
 <span class="comment"># Target only the `src` and `pkg` directories</span><br>
 list-codes --include "src/**,pkg/**"<br><br>
@@ -183,14 +189,41 @@ list-codes --include "src/**,pkg/**"<br><br>
 list-codes --exclude "**/*.test.go"<br><br>
 
 <span class="comment"># Add an 'explain' prompt and output to a file</span><br>
-list-codes --prompt explain --output for_llm.txt
+list-codes --prompt explain --output for_llm.txt<br><br>
+
+<span class="comment"># Enable debug mode and force language</span><br>
+list-codes --debug --lang en<br><br>
+
+<span class="comment"># Show version information</span><br>
+list-codes --version
+        </div>
+
+        <h3>Command-Line Options</h3>
+        <div class="code-block">
+<span class="comment"># Core options</span><br>
+--folder, -f     &nbsp;&nbsp;&nbsp; Folder to scan (default: current directory)<br>
+--output, -o     &nbsp;&nbsp;&nbsp; Output Markdown file path<br>
+--prompt, -p     &nbsp;&nbsp;&nbsp; Prompt template name to prepend to output<br><br>
+
+<span class="comment"># Filtering options</span><br>
+--include, -i    &nbsp;&nbsp;&nbsp; Folder path to include (repeatable)<br>
+--exclude, -e    &nbsp;&nbsp;&nbsp; Folder path to exclude (repeatable)<br>
+--readme-only    &nbsp;&nbsp;&nbsp; Only collect README.md files<br>
+--max-file-size  &nbsp;&nbsp;&nbsp; Maximum file size in bytes (default: 1MB)<br>
+--max-depth      &nbsp;&nbsp;&nbsp; Max depth for directory structure (default: 7)<br><br>
+
+<span class="comment"># Other options</span><br>
+--debug          &nbsp;&nbsp;&nbsp; Enable debug mode<br>
+--lang           &nbsp;&nbsp;&nbsp; Force language (ja|en) instead of auto-detection<br>
+--version, -v    &nbsp;&nbsp;&nbsp; Show version information<br>
+--help, -h       &nbsp;&nbsp;&nbsp; Show help message
         </div>
     </section>
 
     <section class="section">
         <h2>📄 Example Output</h2>
         <p>
-            Below is an example of the output when running <code>list-codes --folder go-src</code>. The project structure and source code are formatted into a single Markdown file.
+            Below is an example of the output when running <code>list-codes --folder ./my-project</code>. The project structure and source code are formatted into a single Markdown file.
         </p>
         <details>
             <summary style="cursor: pointer; font-weight: bold;">Click to expand/collapse the example output</summary>

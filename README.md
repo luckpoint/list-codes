@@ -19,17 +19,25 @@ brew tap luckpoint/list-codes
 brew install list-codes
 ```
 
-### Option 2: Download Binary
-
-Download the latest binary for your platform from the [releases page](https://github.com/luckpoint/list-codes/releases).
-
-### Option 3: Go Install
+### Option 2: Go Install
 
 ```bash
 go install github.com/luckpoint/list-codes/cmd/list-codes@latest
 ```
 
-**Note:** If you install with `go install`, you need to have `$GOPATH/bin` (or `$HOME/go/bin`) in your system's `PATH`.
+**Note:** You need to have `$GOPATH/bin` (or `$HOME/go/bin`) in your system's `PATH`.
+
+### Option 3: Download Binary
+
+Download the latest binary for your platform from the [releases page](https://github.com/luckpoint/list-codes/releases).
+
+### Option 4: Build from Source
+
+```bash
+git clone https://github.com/luckpoint/list-codes.git
+cd list-codes
+go build -o list-codes cmd/list-codes/main.go
+```
 
 ## Usage
 
@@ -39,8 +47,8 @@ go install github.com/luckpoint/list-codes/cmd/list-codes@latest
 # Display the source code of the current directory to standard output
 list-codes
 
-# Specify a project path
-list-codes /path/to/your/project
+# Specify a project folder
+list-codes --folder /path/to/your/project
 
 # Target only the `src` and `pkg` directories
 list-codes --include "src/**,pkg/**"
@@ -50,6 +58,12 @@ list-codes --exclude "**/*.test.go"
 
 # Add an 'explain' prompt and output to a file
 list-codes --prompt explain --output for_llm.txt
+
+# Enable debug mode and force language
+list-codes --debug --lang en
+
+# Show version information
+list-codes --version
 ```
 
 ### LLM Integration
@@ -58,15 +72,35 @@ The output of this tool is intended to be used directly as input for an LLM.
 
 ```bash
 # Copy the entire project's source code to the clipboard and paste it into an LLM
-list-codes /path/to/your/project | pbcopy
+list-codes --folder /path/to/your/project | pbcopy
 
 # Request a code review for a specific feature
-list-codes --prompt refactor ./src/feature | llm-cli
+list-codes --prompt refactor --folder ./src/feature | llm-cli
 
 # Generate a project overview
-list-codes --prompt explain . > project_overview.txt
+list-codes --prompt explain --folder . > project_overview.txt
 # (Then, pass the content of project_overview.txt to the LLM)
 ```
+
+### Command-Line Options
+
+#### Core Options
+- `--folder`, `-f`: Folder to scan (default: current directory)
+- `--output`, `-o`: Output Markdown file path
+- `--prompt`, `-p`: Prompt template name to prepend to output
+
+#### Filtering Options
+- `--include`, `-i`: Folder path to include (repeatable)
+- `--exclude`, `-e`: Folder path to exclude (repeatable)
+- `--readme-only`: Only collect README.md files
+- `--max-file-size`: Maximum file size in bytes (default: 1MB)
+- `--max-depth`: Max depth for directory structure (default: 7)
+
+#### Other Options
+- `--debug`: Enable debug mode
+- `--lang`: Force language (ja|en) instead of auto-detection
+- `--version`, `-v`: Show version information
+- `--help`, `-h`: Show help message
 
 ## Build
 
