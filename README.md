@@ -9,6 +9,7 @@ It streamlines tasks like code reviews, documentation generation, and bug detect
 - **📁 Source Code Collection:** Recursively collects source code from the specified directory. It automatically respects `.gitignore` to exclude unnecessary files.
 - **🔧 Flexible Filtering:** Use `--exclude` and `--include` options to omit or target specific files and directories.
 - **🤖 LLM-Ready Prompts:** The `--prompt` option allows you to prepend one of over 15 predefined prompts (e.g., `explain`, `find-bugs`) to make your instructions to the LLM simple and precise.
+- **🎯 Smart Dotfile Exclusion:** Automatically excludes dotfiles and dot-directories (like `.git`, `.vscode`, `.idea`) by default, while allowing explicit inclusion when needed.
 
 ## Installation
 
@@ -82,6 +83,66 @@ list-codes --prompt explain --folder . > project_overview.txt
 # (Then, pass the content of project_overview.txt to the LLM)
 ```
 
+## Filtering and Exclusion Behavior
+
+### Automatic Exclusions
+
+**list-codes** automatically excludes certain files and directories to focus on relevant source code:
+
+#### Dotfiles and Dot-directories (Default)
+All files and directories starting with a dot (`.`) are excluded by default, including:
+- `.git`, `.gitignore`, `.github/`
+- `.vscode/`, `.idea/`
+- `.env`, `.DS_Store`
+- `.terraform/`, `.serverless/`
+- `.pytest_cache/`, `.mypy_cache/`, `.ruff_cache/`
+
+#### Build and Dependency Directories
+Common build artifacts and dependency directories are also excluded:
+- `node_modules/`, `vendor/`, `target/`
+- `build/`, `dist/`, `__pycache__/`
+- `env/`, `venv/`
+
+#### Gitignore Integration
+The tool automatically respects your project's `.gitignore` rules.
+
+### Override Exclusions with --include
+
+You can override the default exclusions by explicitly including specific files or directories:
+
+```bash
+# Include .github directory (normally excluded as a dotfile)
+list-codes --include ".github/**"
+
+# Include specific dotfiles
+list-codes --include ".env" --include ".dockerignore"
+
+# Include everything in .vscode directory
+list-codes --include ".vscode/**"
+```
+
+### Exclusion Priority
+
+The filtering logic follows a clear priority system:
+
+1. **Explicit exclusions** (`--exclude`) always win
+2. **Include whitelist** (`--include`) overrides default dotfile exclusion
+3. **Default dotfile exclusion** applies if not explicitly included
+4. **Include-only mode**: When using `--include`, only whitelisted items are processed
+
+### Example Filtering Scenarios
+
+```bash
+# Exclude all test files but include .github workflows
+list-codes --exclude "**/*test*" --include ".github/workflows/**"
+
+# Include only specific source directories, excluding dotfiles elsewhere
+list-codes --include "src/**" --include "lib/**"
+
+# Include documentation from typically excluded directories
+list-codes --include ".github/**.md" --include "docs/**"
+```
+
 ### Command-Line Options
 
 #### Core Options
@@ -90,8 +151,8 @@ list-codes --prompt explain --folder . > project_overview.txt
 - `--prompt`, `-p`: Prompt template name to prepend to output
 
 #### Filtering Options
-- `--include`, `-i`: Folder path to include (repeatable)
-- `--exclude`, `-e`: Folder path to exclude (repeatable)
+- `--include`, `-i`: File/folder path to include, overrides default exclusions (repeatable, supports glob patterns)
+- `--exclude`, `-e`: File/folder path to exclude, takes highest priority (repeatable, supports glob patterns)
 - `--readme-only`: Only collect README.md files
 - `--max-file-size`: Maximum file size in bytes (default: 1MB)
 - `--max-depth`: Max depth for directory structure (default: 7)

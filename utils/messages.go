@@ -10,7 +10,7 @@ func GetHelpMessages() (string, string, string) {
 
 func getEnglishHelpMessages() (string, string, string) {
 	short := "Summarizes a project's structure and source code into a Markdown file."
-	
+
 	long := `list-codes is a CLI tool that scans a specified project folder and generates a Markdown summary including:
 
 - Project directory structure
@@ -43,8 +43,8 @@ Example usage:
   list-codes --readme-only
   list-codes --exclude node_modules,vendor
   list-codes --prompt explain
-  list-codes --prompt /path/to/custom-prompt.txt
-  list-codes --prompt "Analyze this code for security issues:"`
+  list-codes --prompt security
+  list-codes --prompt refactor`
 
 	completion := `To load completions:
 
@@ -89,8 +89,8 @@ PowerShell:
 
 func getJapaneseHelpMessages() (string, string, string) {
 	short := "プロジェクトの構造とソースコードをMarkdownファイルに要約します。"
-	
-	long := `list-codesは、指定されたプロジェクトフォルダをスキャンし、以下を含むMarkdown要約を生成するCLIツールです：
+
+	long := `list-codesは、指定されたプロジェクトフォルダをスキャンし、以下を含むMarkdownファイルを生成するCLIツールです：
 
 - プロジェクトディレクトリ構造
 - 検出されたプログラミング言語とフレームワーク
@@ -122,8 +122,8 @@ func getJapaneseHelpMessages() (string, string, string) {
   list-codes --readme-only
   list-codes --exclude node_modules,vendor
   list-codes --prompt explain
-  list-codes --prompt /path/to/custom-prompt.txt
-  list-codes --prompt "セキュリティ問題についてこのコードを分析してください:"`
+  list-codes --prompt security
+  list-codes --prompt refactor`
 
 	completion := `補完を読み込むには:
 
@@ -164,3 +164,4 @@ PowerShell:
 
 	return short, long, completion
 }
+

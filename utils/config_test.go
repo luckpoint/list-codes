@@ -15,12 +15,11 @@ func TestConstants(t *testing.T) {
 }
 
 // TestDefaultExcludeNames はDefaultExcludeNamesのテストです。
+// Note: Dotfiles are now handled by a general rule in shouldSkipDir
 func TestDefaultExcludeNames(t *testing.T) {
 	expectedNames := []string{
-		".git", "node_modules", "vendor", "target", "build", "dist",
-		"__pycache__", ".venv", ".vscode", ".idea", ".serverless",
-		".terraform", ".pytest_cache", ".mypy_cache", ".ruff_cache",
-		"env", "venv", ".DS_Store",
+		"node_modules", "vendor", "target", "build", "dist",
+		"__pycache__", "env", "venv",
 	}
 	
 	for _, name := range expectedNames {
@@ -82,13 +81,13 @@ func TestExtensions(t *testing.T) {
 		language   string
 		extensions []string
 	}{
-		{"Python", []string{".py"}},
+		{"Python", []string{".py", ".pyw"}},
 		{"Go", []string{".go"}},
-		{"Javascript", []string{".js", ".jsx"}},
-		{"Typescript", []string{".ts", ".tsx"}},
+		{"Javascript", []string{".js", ".jsx", ".mjs", ".cjs"}},
+		{"Typescript", []string{".ts", ".tsx", ".mts", ".cts"}},
 		{"Rust", []string{".rs"}},
 		{"Java", []string{".java"}},
-		{"C++", []string{".cpp", ".hpp", ".cxx", ".hxx", ".cc", ".hh", ".h"}},
+		{"C++", []string{".cpp", ".hpp", ".cxx", ".hxx", ".cc", ".hh", ".c++", ".h++"}},
 		{"Dockerfile", []string{"Dockerfile"}},
 		{"Markdown", []string{".md"}},
 		{"Solidity", []string{".sol"}},
@@ -126,8 +125,8 @@ func TestFrameworkDependencyFiles(t *testing.T) {
 		files    []string
 	}{
 		{"Go", []string{"go.mod", "go.sum"}},
-		{"Javascript", []string{"package.json", "package-lock.json", "yarn.lock"}},
-		{"Python", []string{"requirements.txt", "Pipfile", "Pipfile.lock", "pyproject.toml"}},
+		{"Javascript", []string{"package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb"}},
+		{"Python", []string{"requirements.txt", "Pipfile", "Pipfile.lock", "pyproject.toml", "poetry.lock"}},
 		{"Ruby", []string{"Gemfile", "Gemfile.lock"}},
 		{"Java", []string{"build.gradle", "settings.gradle", "pom.xml"}},
 		{"Rust", []string{"Cargo.toml", "Cargo.lock"}},
@@ -160,7 +159,7 @@ func TestFrameworkDependencyFiles(t *testing.T) {
 
 // TestExcludeTestKeywords はEXCLUDE_TEST_KEYWORDSのテストです。
 func TestExcludeTestKeywords(t *testing.T) {
-	expectedKeywords := []string{"test", "spec"}
+	expectedKeywords := []string{"test", "spec", "e2e", "benchmark", "bench", "mock", "fixture"}
 	
 	if len(EXCLUDE_TEST_KEYWORDS) != len(expectedKeywords) {
 		t.Errorf("EXCLUDE_TEST_KEYWORDS should have %d keywords, got %d", len(expectedKeywords), len(EXCLUDE_TEST_KEYWORDS))
@@ -180,7 +179,11 @@ func TestExcludeTestKeywords(t *testing.T) {
 
 // TestExcludeTestDirs はEXCLUDE_TEST_DIRSのテストです。
 func TestExcludeTestDirs(t *testing.T) {
-	expectedDirs := []string{"/test/", "/tests/", "/spec/", "test/", "tests/", "spec/"}
+	expectedDirs := []string{
+		"/test/", "/tests/", "/spec/", "/specs/", "/__tests__/", "/__test__/", 
+		"/testing/", "/fixtures/", "/mocks/", "/e2e/", "/integration/", "/unit/",
+		"test/", "tests/", "spec/", "specs/",
+	}
 	
 	if len(EXCLUDE_TEST_DIRS) != len(expectedDirs) {
 		t.Errorf("EXCLUDE_TEST_DIRS should have %d directories, got %d", len(expectedDirs), len(EXCLUDE_TEST_DIRS))
@@ -200,7 +203,14 @@ func TestExcludeTestDirs(t *testing.T) {
 
 // TestExcludeTestPatterns はEXCLUDE_TEST_PATTERNSのテストです。
 func TestExcludeTestPatterns(t *testing.T) {
-	expectedPatterns := []string{".t.sol"}
+	expectedPatterns := []string{
+		"_test.go", "_spec.rb", ".test.js", ".spec.js", ".test.jsx", ".spec.jsx",
+		".test.ts", ".spec.ts", ".test.tsx", ".spec.tsx", ".test.py", ".spec.py",
+		"Test.java", "Tests.java", "IT.java", ".test.php", ".spec.php", "_test.rb",
+		".test.cs", ".spec.cs", "Test.cs", "Tests.cs", ".test.cpp", ".spec.cpp",
+		".test.c", ".spec.c", ".test.rs", ".spec.rs", ".test.kt", ".spec.kt",
+		"Test.kt", ".test.swift", ".spec.swift", "Test.swift", ".t.sol", ".test.sol", ".spec.sol",
+	}
 	
 	if len(EXCLUDE_TEST_PATTERNS) != len(expectedPatterns) {
 		t.Errorf("EXCLUDE_TEST_PATTERNS should have %d patterns, got %d", len(expectedPatterns), len(EXCLUDE_TEST_PATTERNS))

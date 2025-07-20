@@ -104,7 +104,7 @@ func DetectProjectLanguages(folderPath string, debugMode bool, includePaths, exc
 				return nil
 			}
 			lang := GetLanguageByExtension(d.Name())
-			if lang != "" && !IsTestFile(path) {
+			if lang != "" && !IsTestFile(path, debugMode) {
 				extensionCounts[lang]++
 			}
 		}

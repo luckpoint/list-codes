@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	
+	"golang.org/x/text/language"
 )
 
 func TestGetPromptTemplateNames(t *testing.T) {
@@ -31,6 +32,10 @@ func TestGetPromptTemplateNames(t *testing.T) {
 }
 
 func TestGetPrompt_PredefinedTemplate(t *testing.T) {
+	// Ensure we start with English for consistent testing
+	currentLang = language.English
+	printer = nil
+	
 	tests := []struct {
 		name     string
 		template string
@@ -39,7 +44,7 @@ func TestGetPrompt_PredefinedTemplate(t *testing.T) {
 		{"Valid template - explain", "explain", false},
 		{"Valid template - find-bugs", "find-bugs", false},
 		{"Valid template - refactor", "refactor", false},
-		{"Invalid template", "nonexistent", false}, // Should be treated as custom text
+		{"Invalid template", "nonexistent", true}, // Should return error for unknown template
 	}
 	
 	for _, tt := range tests {
@@ -51,15 +56,9 @@ func TestGetPrompt_PredefinedTemplate(t *testing.T) {
 				return
 			}
 			
-			if tt.template == "explain" {
-				if !strings.Contains(prompt, "プロジェクトの目的と主要機能") {
-					t.Errorf("Expected explain template to contain specific text")
-				}
-			}
-			
-			if tt.template == "nonexistent" {
-				if prompt != "nonexistent" {
-					t.Errorf("Expected custom text to be returned as-is, got %s", prompt)
+			if tt.template == "explain" && err == nil {
+				if !strings.Contains(prompt, "Project purpose") && !strings.Contains(prompt, "プロジェクトの目的と主要機能") {
+					t.Errorf("Expected explain template to contain specific text, got: %s", prompt)
 				}
 			}
 		})
@@ -70,38 +69,21 @@ func TestGetPrompt_FromFile(t *testing.T) {
 	// Create a temporary file with prompt content
 	tempDir := t.TempDir()
 	promptFile := filepath.Join(tempDir, "test-prompt.txt")
-	testContent := "This is a test prompt from file\nWith multiple lines"
 	
-	err := os.WriteFile(promptFile, []byte(testContent), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
-	
-	// Test reading from file
-	prompt, err := GetPrompt(promptFile, false)
-	if err != nil {
-		t.Errorf("GetPrompt() error = %v", err)
-		return
-	}
-	
-	expectedContent := strings.TrimSpace(testContent)
-	if prompt != expectedContent {
-		t.Errorf("Expected prompt content '%s', got '%s'", expectedContent, prompt)
+	// Test reading from file path - should return error as it's not a predefined template
+	_, err := GetPrompt(promptFile, false)
+	if err == nil {
+		t.Errorf("GetPrompt() should return error for file paths, got no error")
 	}
 }
 
 func TestGetPrompt_FileNotFound(t *testing.T) {
 	nonExistentFile := "/path/that/does/not/exist/prompt.txt"
 	
-	// Since the file doesn't exist, it should be treated as custom text
-	prompt, err := GetPrompt(nonExistentFile, false)
-	if err != nil {
-		t.Errorf("GetPrompt() should not error for non-existent files (treated as custom text), got error: %v", err)
-		return
-	}
-	
-	if prompt != nonExistentFile {
-		t.Errorf("Expected custom text to be returned as-is, got %s", prompt)
+	// Should return error for file paths that aren't predefined templates
+	_, err := GetPrompt(nonExistentFile, false)
+	if err == nil {
+		t.Errorf("GetPrompt() should return error for file paths, got no error")
 	}
 }
 
@@ -120,14 +102,10 @@ func TestGetPrompt_EmptyPrompt(t *testing.T) {
 func TestGetPrompt_CustomText(t *testing.T) {
 	customText := "This is a custom prompt text"
 	
-	prompt, err := GetPrompt(customText, false)
-	if err != nil {
-		t.Errorf("GetPrompt() error = %v", err)
-		return
-	}
-	
-	if prompt != customText {
-		t.Errorf("Expected custom text to be returned as-is, got '%s'", prompt)
+	// Should return error for custom text that's not a predefined template
+	_, err := GetPrompt(customText, false)
+	if err == nil {
+		t.Errorf("GetPrompt() should return error for custom text, got no error")
 	}
 }
 
