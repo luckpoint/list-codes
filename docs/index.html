@@ -5,230 +5,884 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>list-codes - Source Code Analysis Assistant for LLMs</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
-            color: #333;
+        :root {
+            --primary-color: #43A6C6;
+            --secondary-color: #3A506B;
+            --accent-color: #FF6B6B;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --text-light: #6c757d;
+            --surface-color: #f7f9fc;
+            --border-color: #e9ecef;
+            --shadow-light: 0 4px 12px rgba(0,0,0,0.05);
+            --shadow-medium: 0 8px 32px rgba(0,0,0,0.1);
+            --shadow-heavy: 0 16px 48px rgba(0,0,0,0.15);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --transition-fast: 0.2s ease;
+            --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #e2e8f0;
+            --text-light: #a0a0a0;
+            --surface-color: #2d3748;
+            --border-color: #4a5568;
+            --shadow-light: 0 4px 12px rgba(0,0,0,0.3);
+            --shadow-medium: 0 8px 32px rgba(0,0,0,0.4);
+            --shadow-heavy: 0 16px 48px rgba(0,0,0,0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            transition: background-color var(--transition-smooth), color var(--transition-smooth);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+            transition: all var(--transition-smooth);
+            transform: translateY(-100%);
+        }
+
+        [data-theme="dark"] .nav {
+            background: rgba(26, 26, 26, 0.95);
+        }
+
+        .nav.visible {
+            transform: translateY(0);
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            background: var(--surface-color);
+            transform: translateY(-2px);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background: var(--primary-color);
+            border-radius: 50%;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 2px solid var(--border-color);
+            padding: 0.5rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-color);
+            transition: all var(--transition-fast);
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary-color);
+            transform: scale(1.1);
+        }
+
+        /* Header */
         .header {
             text-align: center;
-            margin-bottom: 2rem;
-            padding: 3rem 0;
-            background: linear-gradient(135deg, #43A6C6 0%, #3A506B 100%);
+            padding: 8rem 0 4rem;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            box-shadow: var(--shadow-heavy);
+            position: relative;
+            overflow: hidden;
         }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
         .header h1 {
-            margin: 0;
-            font-size: 2.8rem;
-            font-weight: 700;
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1s ease 0.3s forwards;
         }
+
         .header p {
-            margin: 1rem 0 0 0;
-            font-size: 1.2rem;
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
             opacity: 0.9;
             font-weight: 300;
+            max-width: 600px;
+            margin: 0 auto;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1s ease 0.6s forwards;
         }
+
+        .floating-elements {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .floating-element {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .floating-element:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .floating-element:nth-child(2) {
+            width: 120px;
+            height: 120px;
+            top: 60%;
+            right: 15%;
+            animation-delay: 2s;
+        }
+
+        .floating-element:nth-child(3) {
+            width: 60px;
+            height: 60px;
+            top: 80%;
+            left: 80%;
+            animation-delay: 4s;
+        }
+
+        /* Main content */
+        .main {
+            padding: 4rem 0;
+        }
+
         .section {
-            margin: 2.5rem 0;
+            margin: 4rem 0;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all var(--transition-smooth);
         }
+
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         .section h2 {
-            font-size: 2rem;
-            color: #1B2A41;
-            border-bottom: 3px solid #43A6C6;
-            padding-bottom: 0.5rem;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            color: var(--secondary-color);
+            margin-bottom: 2rem;
+            position: relative;
+            padding-bottom: 1rem;
+        }
+
+        .section h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 2px;
+        }
+
+        .section p {
+            font-size: 1.1rem;
             margin-bottom: 1.5rem;
+            color: var(--text-light);
         }
+
         .usecase-section {
-            background: #f7f9fc;
-            padding: 2rem;
-            border-radius: 12px;
-            margin: 2rem 0;
+            background: var(--surface-color);
+            padding: 3rem;
+            border-radius: var(--radius-lg);
+            margin: 3rem 0;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
         }
+
+        .usecase-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        }
+
+        /* Code blocks */
         .code-block {
-            background: #2d3748;
+            background: #1a202c;
             color: #e2e8f0;
-            border-radius: 8px;
-            padding: 1.2rem;
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
             overflow-x: auto;
-            font-family: 'Monaco', 'Consolas', 'SF Mono', monospace;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
             font-size: 0.9rem;
-            margin: 1rem 0;
+            margin: 1.5rem 0;
+            position: relative;
+            border: 1px solid #2d3748;
         }
-        .code-block .comment {
+
+        .code-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #2d3748;
+        }
+
+        .code-title {
+            color: #a0aec0;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .copy-btn {
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            color: #e2e8f0;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all var(--transition-fast);
+        }
+
+        .copy-btn:hover {
+            background: #4a5568;
+            transform: translateY(-1px);
+        }
+
+        .copy-btn.copied {
+            background: #38a169;
+            border-color: #38a169;
+        }
+
+        .comment {
             color: #68d391;
         }
+
+        .string {
+            color: #fbd38d;
+        }
+
+        .keyword {
+            color: #90cdf4;
+        }
+
+        /* Feature grid */
         .feature-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
         }
+
         .feature {
-            background: #ffffff;
-            padding: 1.5rem;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            background: var(--bg-color);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-light);
+            transition: all var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
         }
+
+        .feature::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            transform: scaleX(0);
+            transition: transform var(--transition-smooth);
+        }
+
+        .feature:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-heavy);
+        }
+
         .feature h3 {
-            color: #3A506B;
-            margin-top: 0;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
             font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        footer {
+
+        .feature-icon {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Installation tabs */
+        .install-tabs {
+            display: flex;
+            margin: 2rem 0 1rem;
+            border-bottom: 2px solid var(--border-color);
+            gap: 0.5rem;
+        }
+
+        .install-tab {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+            font-weight: 500;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+
+        .install-tab.active {
+            color: var(--primary-color);
+            background: var(--surface-color);
+        }
+
+        .install-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary-color);
+        }
+
+        .install-content {
+            display: none;
+        }
+
+        .install-content.active {
+            display: block;
+        }
+
+        /* Expandable details */
+        .expandable {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin: 2rem 0;
+            overflow: hidden;
+        }
+
+        .expandable-header {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color var(--transition-fast);
+        }
+
+        .expandable-header:hover {
+            background: var(--border-color);
+        }
+
+        .expandable-title {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .expandable-icon {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            transition: transform var(--transition-fast);
+        }
+
+        .expandable.open .expandable-icon {
+            transform: rotate(180deg);
+        }
+
+        .expandable-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height var(--transition-smooth);
+        }
+
+        .expandable.open .expandable-content {
+            max-height: 600px;
+        }
+
+        .expandable-inner {
+            padding: 2rem;
+        }
+
+        /* Scroll progress */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            z-index: 1001;
+            transition: width var(--transition-fast);
+        }
+
+        /* Footer */
+        .footer {
             text-align: center;
-            margin-top: 4rem;
-            padding-top: 2rem;
-            border-top: 1px solid #dee2e6;
-            color: #6c757d;
+            margin-top: 6rem;
+            padding: 3rem 0;
+            border-top: 1px solid var(--border-color);
+            background: var(--surface-color);
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        }
+
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color var(--transition-fast);
+        }
+
+        .footer a:hover {
+            color: var(--accent-color);
+        }
+
+        /* Back to top button */
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all var(--transition-smooth);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            z-index: 1000;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .back-to-top:hover {
+            background: var(--accent-color);
+            transform: translateY(-3px);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-20px) rotate(180deg);
+            }
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .header {
+                padding: 6rem 0 3rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .install-tabs {
+                flex-wrap: wrap;
+            }
+
+            .install-tab {
+                flex: 1;
+                min-width: 120px;
+            }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>list-codes</h1>
-        <p>Source Code Analysis Assistant for LLMs</p>
-    </div>
-
-    <section class="section">
-        <h2>🎯 About This Tool</h2>
-        <p>
-            <strong>list-codes</strong> is a command-line tool designed to collect and format source code from a specified project, making it easy to analyze with Large Language Models (LLMs).
-        </p>
-        <p>
-            Its main purpose is to output the source code of an entire project or a specific directory as a single text, which can be copied and pasted into an LLM's prompt to streamline tasks like code reviews, documentation generation, and bug detection.
-        </p>
-    </section>
-
-    <section class="section usecase-section">
-        <h2>🚀 Primary Use Case: LLM Integration</h2>
-        <p>
-            The output of this tool is intended to be used directly as input for an LLM.
-        </p>
-        <div class="code-block">
-<span class="comment"># Copy the entire project's source code to the clipboard and paste it into an LLM</span><br>
-list-codes /path/to/your/project | pbcopy<br><br>
-
-<span class="comment"># Request a code review for a specific feature</span><br>
-list-codes --prompt refactor ./src/feature | llm-cli<br><br>
-
-<span class="comment"># Generate a project overview</span><br>
-list-codes --prompt explain . > project_overview.txt<br>
-<span class="comment"># (Then, pass the content of project_overview.txt to the LLM)</span>
+    <div class="scroll-progress"></div>
+    
+    <nav class="nav">
+        <div class="container nav-container">
+            <a href="#" class="nav-brand">list-codes</a>
+            <ul class="nav-links">
+                <li><a href="#about" data-scroll="about">About</a></li>
+                <li><a href="#features" data-scroll="features">Features</a></li>
+                <li><a href="#installation" data-scroll="installation">Installation</a></li>
+                <li><a href="#examples" data-scroll="examples">Examples</a></li>
+            </ul>
+            <button class="theme-toggle" aria-label="Toggle theme">🌙</button>
         </div>
-        <p>
-            You can ask the LLM to perform tasks such as:
-        </p>
-        <ul>
-            <li><strong>Understanding a new project:</strong> Quickly grasp the overall picture and architecture.</li>
-            <li><strong>Code review:</strong> Get feedback on bugs, security vulnerabilities, and performance issues.</li>
-            <li><strong>Refactoring suggestions:</strong> Receive ideas for cleaner and more efficient code.</li>
-            <li><strong>Documentation generation:</strong> Create drafts for READMEs and specifications.</li>
-            <li><strong>Test ideas:</strong> Brainstorm test cases to improve coverage.</li>
-        </ul>
-    </section>
+    </nav>
 
-    <section class="section">
-        <h2>✨ Key Features</h2>
-        <div class="feature-grid">
-            <div class="feature">
-                <h3>📁 Source Code Collection</h3>
-                <p>Recursively collects source code from the specified directory. It automatically respects <code>.gitignore</code> to exclude unnecessary files like <code>node_modules</code>.</p>
-            </div>
-            <div class="feature">
-                <h3>🔧 Flexible Filtering</h3>
-                <p>Use <code>--exclude</code> and <code>--include</code> options to omit or target specific files and directories.</p>
-            </div>
-            <div class="feature">
-                <h3>🤖 LLM-Ready Prompts</h3>
-                <p>The <code>--prompt</code> option allows you to prepend one of over 15 predefined prompts (e.g., <code>explain</code>, <code>find-bugs</code>) to make your instructions to the LLM simple and precise.</p>
-            </div>
+    <header class="header">
+        <div class="floating-elements">
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
         </div>
-    </section>
-
-    <section class="section">
-        <h2>🛠️ Installation and Usage</h2>
-        <h3>Installation</h3>
-        <h4>Option 1: Homebrew (macOS/Linux) - Recommended</h4>
-        <div class="code-block">
-brew tap luckpoint/list-codes<br>
-brew install list-codes
+        <div class="container header-content">
+            <h1>list-codes</h1>
+            <p>Source Code Analysis Assistant for Large Language Models</p>
         </div>
-        <h4>Option 2: Go Install</h4>
-        <div class="code-block">
-go install github.com/luckpoint/list-codes/cmd/list-codes@latest
-        </div>
-        <p>
-            <strong>Note:</strong> You need to have <code>$GOPATH/bin</code> (or <code>$HOME/go/bin</code>) in your system's <code>PATH</code>.
-        </p>
-        <h4>Option 3: Download Binary</h4>
-        <p>Download the latest binary for your platform from the <a href="https://github.com/luckpoint/list-codes/releases">releases page</a>.</p>
-        <h4>Option 4: Build from Source</h4>
-        <div class="code-block">
-git clone https://github.com/luckpoint/list-codes.git<br>
-cd list-codes<br>
-go build -o list-codes cmd/list-codes/main.go
-        </div>
+    </header>
 
-        <h3>Basic Usage</h3>
-        <div class="code-block">
-<span class="comment"># Display the source code of the current directory to standard output</span><br>
-list-codes<br><br>
+    <main class="main">
+        <div class="container">
+            <section class="section" id="about">
+                <h2>🎯 About This Tool</h2>
+                <p>
+                    <strong>list-codes</strong> is a command-line tool designed to collect and format source code from a specified project, making it easy to analyze with Large Language Models (LLMs).
+                </p>
+                <p>
+                    Its main purpose is to output the source code of an entire project or a specific directory as a single text, which can be copied and pasted into an LLM's prompt to streamline tasks like code reviews, documentation generation, and bug detection.
+                </p>
+            </section>
 
-<span class="comment"># Specify a project folder</span><br>
-list-codes --folder /path/to/your/project<br><br>
+            <section class="section usecase-section">
+                <h2>🚀 Primary Use Case: LLM Integration</h2>
+                <p>
+                    The output of this tool is intended to be used directly as input for an LLM.
+                </p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Terminal Commands</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre><code><span class="comment"># Copy the entire project's source code to the clipboard and paste it into an LLM</span>
+<span class="keyword">list-codes</span> /path/to/your/project | pbcopy
 
-<span class="comment"># Target only the `src` and `pkg` directories</span><br>
-list-codes --include "src/**,pkg/**"<br><br>
+<span class="comment"># Request a code review for a specific feature</span>
+<span class="keyword">list-codes</span> --prompt refactor ./src/feature | llm-cli
 
-<span class="comment"># Exclude `*.test.go` files</span><br>
-list-codes --exclude "**/*.test.go"<br><br>
+<span class="comment"># Generate a project overview</span>
+<span class="keyword">list-codes</span> --prompt explain . > project_overview.txt
+<span class="comment"># (Then, pass the content of project_overview.txt to the LLM)</span></code></pre>
+                </div>
+                <p>
+                    You can ask the LLM to perform tasks such as:
+                </p>
+                <ul>
+                    <li><strong>Understanding a new project:</strong> Quickly grasp the overall picture and architecture.</li>
+                    <li><strong>Code review:</strong> Get feedback on bugs, security vulnerabilities, and performance issues.</li>
+                    <li><strong>Refactoring suggestions:</strong> Receive ideas for cleaner and more efficient code.</li>
+                    <li><strong>Documentation generation:</strong> Create drafts for READMEs and specifications.</li>
+                    <li><strong>Test ideas:</strong> Brainstorm test cases to improve coverage.</li>
+                </ul>
+            </section>
 
-<span class="comment"># Add an 'explain' prompt and output to a file</span><br>
-list-codes --prompt explain --output for_llm.txt<br><br>
+            <section class="section" id="features">
+                <h2>✨ Key Features</h2>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h3><span class="feature-icon">📁</span>Source Code Collection</h3>
+                        <p>Recursively collects source code from the specified directory. It automatically respects <code>.gitignore</code> to exclude unnecessary files like <code>node_modules</code>.</p>
+                    </div>
+                    <div class="feature">
+                        <h3><span class="feature-icon">🔧</span>Flexible Filtering</h3>
+                        <p>Use <code>--exclude</code> and <code>--include</code> options to omit or target specific files and directories. Smart dotfile exclusion with override capabilities.</p>
+                    </div>
+                    <div class="feature">
+                        <h3><span class="feature-icon">📊</span>Smart File Size Management</h3>
+                        <p>Configure file and total size limits with human-readable formats (e.g., <code>1m</code>, <code>500k</code>, <code>2g</code>) to control output size and processing time.</p>
+                    </div>
+                    <div class="feature">
+                        <h3><span class="feature-icon">🤖</span>LLM-Ready Prompts</h3>
+                        <p>The <code>--prompt</code> option allows you to prepend one of over 15 predefined prompts (e.g., <code>explain</code>, <code>find-bugs</code>) to make your instructions to the LLM simple and precise.</p>
+                    </div>
+                    <div class="feature">
+                        <h3><span class="feature-icon">🧪</span>Test File Control</h3>
+                        <p>Automatically excludes test files by default, with <code>--include-tests</code> option to include them when needed for comprehensive analysis.</p>
+                    </div>
+                    <div class="feature">
+                        <h3><span class="feature-icon">🎯</span>Structured Output</h3>
+                        <p>Generates organized Markdown with Source Code Size Check, Project Structure, Source Files, and Configuration sections in logical order.</p>
+                    </div>
+                </div>
+            </section>
 
-<span class="comment"># Enable debug mode and force language</span><br>
-list-codes --debug --lang en<br><br>
+            <section class="section" id="installation">
+                <h2>🛠️ Installation and Usage</h2>
+                <h3>Installation</h3>
+                <div class="install-tabs">
+                    <button class="install-tab active" onclick="switchTab('homebrew')">Homebrew</button>
+                    <button class="install-tab" onclick="switchTab('go')">Go Install</button>
+                    <button class="install-tab" onclick="switchTab('binary')">Binary</button>
+                    <button class="install-tab" onclick="switchTab('source')">Source</button>
+                </div>
 
-<span class="comment"># Show version information</span><br>
-list-codes --version
-        </div>
+                <div class="install-content active" id="homebrew">
+                    <h4>Option 1: Homebrew (macOS/Linux) - Recommended</h4>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Homebrew Installation</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code><span class="keyword">brew</span> tap luckpoint/list-codes
+<span class="keyword">brew</span> install list-codes</code></pre>
+                    </div>
+                </div>
 
-        <h3>Command-Line Options</h3>
-        <div class="code-block">
-<span class="comment"># Core options</span><br>
---folder, -f     &nbsp;&nbsp;&nbsp; Folder to scan (default: current directory)<br>
---output, -o     &nbsp;&nbsp;&nbsp; Output Markdown file path<br>
---prompt, -p     &nbsp;&nbsp;&nbsp; Prompt template name to prepend to output<br><br>
+                <div class="install-content" id="go">
+                    <h4>Option 2: Go Install</h4>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Go Installation</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code><span class="keyword">go</span> install github.com/luckpoint/list-codes/cmd/list-codes@latest</code></pre>
+                    </div>
+                    <p>
+                        <strong>Note:</strong> You need to have <code>$GOPATH/bin</code> (or <code>$HOME/go/bin</code>) in your system's <code>PATH</code>.
+                    </p>
+                </div>
 
-<span class="comment"># Filtering options</span><br>
---include, -i    &nbsp;&nbsp;&nbsp; Folder path to include (repeatable)<br>
---exclude, -e    &nbsp;&nbsp;&nbsp; Folder path to exclude (repeatable)<br>
---readme-only    &nbsp;&nbsp;&nbsp; Only collect README.md files<br>
---max-file-size  &nbsp;&nbsp;&nbsp; Maximum file size in bytes (default: 1MB)<br>
---max-depth      &nbsp;&nbsp;&nbsp; Max depth for directory structure (default: 7)<br><br>
+                <div class="install-content" id="binary">
+                    <h4>Option 3: Download Binary</h4>
+                    <p>Download the latest binary for your platform from the <a href="https://github.com/luckpoint/list-codes/releases">releases page</a>.</p>
+                </div>
 
-<span class="comment"># Other options</span><br>
---debug          &nbsp;&nbsp;&nbsp; Enable debug mode<br>
---lang           &nbsp;&nbsp;&nbsp; Force language (ja|en) instead of auto-detection<br>
---version, -v    &nbsp;&nbsp;&nbsp; Show version information<br>
---help, -h       &nbsp;&nbsp;&nbsp; Show help message
-        </div>
-    </section>
+                <div class="install-content" id="source">
+                    <h4>Option 4: Build from Source</h4>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Build from Source</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <pre><code><span class="keyword">git</span> clone https://github.com/luckpoint/list-codes.git
+<span class="keyword">cd</span> list-codes
+<span class="keyword">go</span> build -o list-codes ./cmd/list-codes</code></pre>
+                    </div>
+                </div>
 
-    <section class="section">
-        <h2>📄 Example Output</h2>
-        <p>
-            Below is an example of the output when running <code>list-codes --folder ./my-project</code>. The project structure and source code are formatted into a single Markdown file.
-        </p>
-        <details>
-            <summary style="cursor: pointer; font-weight: bold;">Click to expand/collapse the example output</summary>
-            <div class="code-block" style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
-<pre><code>## Project Structure
+                <h3>Basic Usage</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Basic Commands</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre><code><span class="comment"># Display the source code of the current directory to standard output</span>
+<span class="keyword">list-codes</span>
+
+<span class="comment"># Specify a project folder</span>
+<span class="keyword">list-codes</span> --folder /path/to/your/project
+
+<span class="comment"># Target only the `src` and `pkg` directories</span>
+<span class="keyword">list-codes</span> --include <span class="string">"src/**,pkg/**"</span>
+
+<span class="comment"># Exclude `*.test.go` files</span>
+<span class="keyword">list-codes</span> --exclude <span class="string">"**/*.test.go"</span>
+
+<span class="comment"># Add an 'explain' prompt and output to a file</span>
+<span class="keyword">list-codes</span> --prompt explain --output for_llm.txt
+
+<span class="comment"># Control file size limits with human-readable formats</span>
+<span class="keyword">list-codes</span> --max-file-size 500k --max-total-size 10m
+
+<span class="comment"># Include test files in the analysis</span>
+<span class="keyword">list-codes</span> --include-tests
+
+<span class="comment"># Enable debug mode and force language</span>
+<span class="keyword">list-codes</span> --debug --lang en
+
+<span class="comment"># Show version information</span>
+<span class="keyword">list-codes</span> --version</code></pre>
+                </div>
+
+                <h3>Command-Line Options</h3>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Available Options</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre><code><span class="comment"># Core options</span>
+--folder, -f      <span class="string">Folder to scan (default: current directory)</span>
+--output, -o      <span class="string">Output Markdown file path</span>
+--prompt, -p      <span class="string">Prompt template name to prepend to output</span>
+
+<span class="comment"># Filtering options</span>
+--include, -i     <span class="string">Folder path to include (repeatable)</span>
+--exclude, -e     <span class="string">Folder path to exclude (repeatable)</span>
+--readme-only     <span class="string">Only collect README.md files</span>
+--max-file-size   <span class="string">Maximum file size (supports 1m, 500k, 2g) (default: 1m)</span>
+--max-total-size  <span class="string">Maximum total file size (supports 10m, 1g) - empty means no limit</span>
+--max-depth       <span class="string">Max depth for directory structure (default: 7)</span>
+--include-tests   <span class="string">Include test files in the output (excluded by default)</span>
+
+<span class="comment"># Other options</span>
+--debug           <span class="string">Enable debug mode</span>
+--lang            <span class="string">Force language (ja|en) instead of auto-detection</span>
+--version, -v     <span class="string">Show version information</span>
+--help, -h        <span class="string">Show help message</span></code></pre>
+                </div>
+            </section>
+
+            <section class="section" id="examples">
+                <h2>📄 Example Output</h2>
+                <p>
+                    Below is an example of the output when running <code>list-codes --folder ./my-project</code>. The output includes a Source Code Size Check section, project structure, and source code formatted into a single Markdown file.
+                </p>
+                <div class="expandable">
+                    <div class="expandable-header" onclick="toggleExpandable(this)">
+                        <span class="expandable-title">Click to view example output</span>
+                        <span class="expandable-icon">▼</span>
+                    </div>
+                    <div class="expandable-content">
+                        <div class="expandable-inner">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example Output</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre><code>## Source Code Size Check
+
+**File Statistics**: 0.15 MB collected, max file: 1.0 MB, max total: unlimited
+
+
+
+## Project Structure
 ```text
 . (go-src)
 ├── .claude
@@ -278,12 +932,6 @@ list-codes --version
 └── utils_doc.txt
 ```
 
-
-## Source Code Files
-
-**File Statistics**: 0.14 MB total (limit: 1.0 MB)
-
-
 ### Go
 
 ### cmd/listcodes/lang_wrapper.go
@@ -309,7 +957,7 @@ func parseLanguageFlag() bool {
 		}
 	}
 	for i, arg := range os.Args {
-		if arg == "--lang" && i+1 < len(os.Args) {
+		if arg == "--lang" && i+1 &lt; len(os.Args) {
 			langValue := os.Args[i+1]
 			if err := utils.SetLanguage(langValue, debugMode); err != nil {
 				utils.PrintError("Invalid language: " + langValue)
@@ -334,21 +982,219 @@ func parseLanguageFlag() bool {
 }
 ```
 
-... and so on ...
-</code></pre>
-            </div>
-        </details>
-    </section>
+... and so on ...</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-    <section class="section">
-        <h2>📜 License</h2>
-        <p>
-            This tool is released under the MIT License. For details, please see the LICENSE file in the GitHub repository.
-        </p>
-    </section>
+            <section class="section">
+                <h2>📜 License</h2>
+                <p>
+                    This tool is released under the MIT License. For details, please see the LICENSE file in the GitHub repository.
+                </p>
+            </section>
+        </div>
+    </main>
 
-    <footer>
-        <p>&copy; 2025 luckpoint | <a href="https://github.com/luckpoint/list-codes" style="color: #6c757d;">GitHub</a></p>
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 luckpoint | <a href="https://github.com/luckpoint/list-codes">GitHub</a></p>
+        </div>
     </footer>
+
+    <button class="back-to-top" onclick="scrollToTop()" aria-label="Back to top">↑</button>
+
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.querySelector('.theme-toggle');
+        const body = document.body;
+        
+        // Check for saved theme or default to light
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            body.setAttribute('data-theme', 'dark');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+
+        // Smooth scrolling and navigation
+        function initSmoothScrolling() {
+            const scrollLinks = document.querySelectorAll('[data-scroll]');
+            
+            scrollLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = link.getAttribute('data-scroll');
+                    const targetElement = document.getElementById(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                        
+                        // Update active nav link
+                        scrollLinks.forEach(l => l.classList.remove('active'));
+                        link.classList.add('active');
+                    }
+                });
+            });
+        }
+
+        // Intersection Observer for scroll animations
+        function initScrollAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+
+            // Observe all sections
+            document.querySelectorAll('.section').forEach(section => {
+                observer.observe(section);
+            });
+        }
+
+        // Scroll progress bar
+        function updateScrollProgress() {
+            const scrollProgress = document.querySelector('.scroll-progress');
+            const scrollTop = window.pageYOffset;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            
+            scrollProgress.style.width = scrollPercent + '%';
+        }
+
+        // Navigation visibility on scroll
+        function initNavVisibility() {
+            const nav = document.querySelector('.nav');
+            let lastScrollY = 0;
+            let ticking = false;
+
+            function updateNavVisibility() {
+                const scrollY = window.pageYOffset;
+                
+                if (scrollY > 100) {
+                    if (scrollY > lastScrollY) {
+                        nav.classList.remove('visible');
+                    } else {
+                        nav.classList.add('visible');
+                    }
+                } else {
+                    nav.classList.remove('visible');
+                }
+                
+                lastScrollY = scrollY;
+                ticking = false;
+            }
+
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    requestAnimationFrame(updateNavVisibility);
+                    ticking = true;
+                }
+            });
+        }
+
+        // Back to top button
+        function initBackToTop() {
+            const backToTop = document.querySelector('.back-to-top');
+            
+            window.addEventListener('scroll', () => {
+                if (window.pageYOffset > 500) {
+                    backToTop.classList.add('visible');
+                } else {
+                    backToTop.classList.remove('visible');
+                }
+            });
+        }
+
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Installation tabs
+        function switchTab(tabName) {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.install-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.install-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Add active class to clicked tab and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // Copy code functionality
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block');
+            const code = codeBlock.querySelector('pre code').textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // Expandable sections
+        function toggleExpandable(header) {
+            const expandable = header.closest('.expandable');
+            expandable.classList.toggle('open');
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            initSmoothScrolling();
+            initScrollAnimations();
+            initNavVisibility();
+            initBackToTop();
+            
+            // Add scroll listener for progress bar
+            window.addEventListener('scroll', () => {
+                updateScrollProgress();
+            });
+        });
+
+        // Performance optimization for scroll events
+        let ticking = false;
+        function optimizedScrollHandler() {
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    updateScrollProgress();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }
+
+        window.addEventListener('scroll', optimizedScrollHandler);
+    </script>
 </body>
 </html>

@@ -1,12 +1,15 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 )
+
+var errTotalSizeLimitExceeded = errors.New("total size limit exceeded")
 
 // IsTestFile determines if the specified file path is a test file.
 // It now accepts a debug flag to print its reasoning.
@@ -321,13 +324,14 @@ func collectDependencyFiles(folderAbs string, primaryLangs []string, fallbackLan
 }
 
 // collectSourceFiles collects source code files.
-func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool) (map[string][]string, int64, int) {
+func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool) (map[string][]string, int64, []string, bool) {
 	sourceFileContents := make(map[string][]string)
 	var totalFileSize int64
-	var skippedFileCount int
+	var skippedFileMessages []string
+	var limitHit bool
 	PrintDebug("Processing source files...", debug)
 
-	filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
+	walkErr := filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, debug), debug)
 			return nil
@@ -379,8 +383,21 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 
 		if fileInfo.Size() > MaxFileSizeBytes {
 			PrintDebug(fmt.Sprintf("Skipping file '%s' due to size (%d bytes > %d bytes)", path, fileInfo.Size(), MaxFileSizeBytes), debug)
-			skippedFileCount++
+			relPath, relErr := filepath.Rel(folderAbs, path)
+			if relErr != nil {
+				relPath = path
+			}
+			relPath = filepath.ToSlash(relPath)
+			fileSizeMB := float64(fileInfo.Size()) / (1024 * 1024)
+			skippedMessage := fmt.Sprintf("`%s` (%.2f MB)", relPath, fileSizeMB)
+			skippedFileMessages = append(skippedFileMessages, skippedMessage)
 			return nil
+		}
+
+		if TotalMaxFileSizeBytes > 0 && totalFileSize+fileInfo.Size() > TotalMaxFileSizeBytes {
+			PrintDebug(fmt.Sprintf("Stopping scan as total size limit of %d bytes would be exceeded.", TotalMaxFileSizeBytes), debug)
+			limitHit = true
+			return errTotalSizeLimitExceeded
 		}
 
 		totalFileSize += fileInfo.Size()
@@ -403,6 +420,11 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		sourceFileContents[language] = append(sourceFileContents[language], markdownContent)
 		return nil
 	})
-	return sourceFileContents, totalFileSize, skippedFileCount
+
+	if walkErr != nil && !errors.Is(walkErr, errTotalSizeLimitExceeded) {
+		PrintWarning(fmt.Sprintf("Error during file walk: %v", walkErr), debug)
+	}
+
+	return sourceFileContents, totalFileSize, skippedFileMessages, limitHit
 }
 
