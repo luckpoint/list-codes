@@ -27,7 +27,7 @@ func TestBuildMarkdownOutput(t *testing.T) {
 			expectedContains: []string{
 				"## Project Structure",
 				"## Dependency and Configuration Files",
-				"## Source Code Files",
+				"## Source Code Size Check",
 				"### Go",
 				"### go.mod",
 				"### main.go",
@@ -39,14 +39,14 @@ func TestBuildMarkdownOutput(t *testing.T) {
 			depFileContents:      map[string][]string{},
 			sourceFileContents:   map[string][]string{"Go": {"### main.go"}},
 			debugMode:            false,
-			expectedContains:     []string{"## Project Structure", "## Source Code Files"},
+			expectedContains:     []string{"## Project Structure", "## Source Code Size Check"},
 			expectedNotContains:  []string{"## Dependency and Configuration Files"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := buildMarkdownOutput(tt.directoryStructureMD, tt.depFileContents, tt.sourceFileContents, 1024, 0, tt.debugMode)
+			output := buildMarkdownOutput(tt.directoryStructureMD, tt.depFileContents, tt.sourceFileContents, 1024, []string{}, false, tt.debugMode)
 
 			for _, substr := range tt.expectedContains {
 				if !strings.Contains(output, substr) {
@@ -87,7 +87,7 @@ func TestProcessSourceFiles(t *testing.T) {
 				"## Project Structure",
 				"main.go",
 				"app.py",
-				"## Source Code Files",
+				"## Source Code Size Check",
 				"### main.go",
 				"```go\npackage main\nfunc main(){}\n```",
 				"### app.py",
@@ -110,7 +110,7 @@ func TestProcessSourceFiles(t *testing.T) {
 				"## Project Structure",
 				"## Dependency and Configuration Files",
 				"### go.mod",
-				"## Source Code Files",
+				"## Source Code Size Check",
 				"### main.go",
 			},
 		},
@@ -198,7 +198,7 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 			includeTests: false,
 			expectedContains: []string{
 				"## Project Structure", 
-				"## Source Code Files",
+				"## Source Code Size Check",
 				"main.go", 
 				"service.go", 
 				"helper.go",
@@ -215,7 +215,7 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 			includeTests: true,
 			expectedContains: []string{
 				"## Project Structure", 
-				"## Source Code Files",
+				"## Source Code Size Check",
 				"main.go", 
 				"service.go", 
 				"helper.go",

@@ -8,8 +8,10 @@ It streamlines tasks like code reviews, documentation generation, and bug detect
 
 - **📁 Source Code Collection:** Recursively collects source code from the specified directory. It automatically respects `.gitignore` to exclude unnecessary files.
 - **🔧 Flexible Filtering:** Use `--exclude` and `--include` options to omit or target specific files and directories.
+- **📊 Smart File Size Management:** Configure file and total size limits with human-readable formats (e.g., `1m`, `500k`, `2g`) to control output size and processing time.
 - **🤖 LLM-Ready Prompts:** The `--prompt` option allows you to prepend one of over 15 predefined prompts (e.g., `explain`, `find-bugs`) to make your instructions to the LLM simple and precise.
 - **🎯 Smart Dotfile Exclusion:** Automatically excludes dotfiles and dot-directories (like `.git`, `.vscode`, `.idea`) by default, while allowing explicit inclusion when needed.
+- **🧪 Test File Control:** Automatically excludes test files by default, with option to include them when needed for comprehensive analysis.
 
 ## Installation
 
@@ -37,7 +39,7 @@ Download the latest binary for your platform from the [releases page](https://gi
 ```bash
 git clone https://github.com/luckpoint/list-codes.git
 cd list-codes
-go build -o list-codes cmd/list-codes/main.go
+go build -o list-codes ./cmd/list-codes
 ```
 
 ## Usage
@@ -59,6 +61,12 @@ list-codes --exclude "**/*.test.go"
 
 # Add an 'explain' prompt and output to a file
 list-codes --prompt explain --output for_llm.txt
+
+# Control file size limits with human-readable formats
+list-codes --max-file-size 500k --max-total-size 10m
+
+# Include test files in the analysis
+list-codes --include-tests
 
 # Enable debug mode and force language
 list-codes --debug --lang en
@@ -143,6 +151,57 @@ list-codes --include "src/**" --include "lib/**"
 list-codes --include ".github/**.md" --include "docs/**"
 ```
 
+## Output Format
+
+**list-codes** generates a structured Markdown output with the following sections in order:
+
+1. **Source Code Size Check** - File statistics, size limits, and information about skipped files
+2. **Project Structure** - Directory tree visualization showing the project layout
+3. **Source Code Files** - Organized by programming language with syntax highlighting
+4. **Dependency and Configuration Files** - Package files, configs (shown in debug mode)
+
+### File Size Management
+
+The tool provides comprehensive file size control to manage output size and processing time:
+
+#### Human-Readable Size Formats
+All size parameters accept human-readable formats:
+- **Bytes**: `123`, `123b`
+- **Kilobytes**: `1k`, `1kb`, `500k`
+- **Megabytes**: `1m`, `1mb`, `2.5m`
+- **Gigabytes**: `1g`, `1gb`, `10g`
+
+#### Size Limit Types
+- `--max-file-size`: Individual file size limit (default: 1m)
+- `--max-total-size`: Total collected files size limit (no limit by default)
+
+#### Size Check Output
+The **Source Code Size Check** section displays:
+- Total size of collected files
+- Current size limits
+- List of skipped files (when files exceed limits)
+- Whether scanning stopped due to total size limit
+
+```bash
+# Examples of size management
+list-codes --max-file-size 100k --max-total-size 5m
+list-codes --max-file-size 2m --max-total-size 50m
+list-codes --max-file-size 500k  # No total limit
+```
+
+### Test File Handling
+
+By default, **list-codes** automatically excludes test files to focus on production code. Test files are identified by:
+
+- **File patterns**: `*_test.go`, `*.test.js`, `*.spec.ts`, `Test*.java`
+- **Directory patterns**: `/test/`, `/tests/`, `/__tests__/`, `/spec/`
+- **Keywords**: Files containing `test`, `spec`, `mock`, `fixture`
+
+To include test files in the analysis:
+```bash
+list-codes --include-tests
+```
+
 ### Command-Line Options
 
 #### Core Options
@@ -154,8 +213,10 @@ list-codes --include ".github/**.md" --include "docs/**"
 - `--include`, `-i`: File/folder path to include, overrides default exclusions (repeatable, supports glob patterns)
 - `--exclude`, `-e`: File/folder path to exclude, takes highest priority (repeatable, supports glob patterns)
 - `--readme-only`: Only collect README.md files
-- `--max-file-size`: Maximum file size in bytes (default: 1MB)
+- `--max-file-size`: Maximum file size to include (supports human-readable formats: 1m, 500k, 2g) (default: 1m)
+- `--max-total-size`: Maximum total file size to collect (supports human-readable formats: 10m, 1g) - empty means no limit
 - `--max-depth`: Max depth for directory structure (default: 7)
+- `--include-tests`: Include test files in the output (excluded by default)
 
 #### Other Options
 - `--debug`: Enable debug mode

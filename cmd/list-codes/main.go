@@ -12,17 +12,19 @@ import (
 )
 
 var (
-	folder       string
-	outputFile   string
-	readmeOnly   bool
-	maxDepth     int
-	debugMode    bool
-	includes     []string
-	excludes     []string
-	prompt       string
-	langFlag     string
-	version      = "dev" // Will be overridden by build flags
-	includeTests bool
+	folder          string
+	outputFile      string
+	readmeOnly      bool
+	maxDepth        int
+	debugMode       bool
+	includes        []string
+	excludes        []string
+	prompt          string
+	langFlag        string
+	version         = "dev" // Will be overridden by build flags
+	includeTests    bool
+	maxFileSizeStr  string
+	maxTotalSizeStr string
 )
 
 func init() {
@@ -56,7 +58,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
 	rootCmd.PersistentFlags().StringSliceVarP(&includes, "include", "i", []string{}, "Folder path to include (repeatable)")
 	rootCmd.PersistentFlags().StringSliceVarP(&excludes, "exclude", "e", []string{}, "Folder path to exclude (repeatable)")
-	rootCmd.PersistentFlags().Int64Var(&utils.MaxFileSizeBytes, "max-file-size", utils.MaxFileSizeBytesDefault, "Maximum file size in bytes to include in the summary")
+	rootCmd.PersistentFlags().StringVar(&maxFileSizeStr, "max-file-size", "1m", "Maximum file size to include (e.g., 1m, 500k, 2g)")
+	rootCmd.PersistentFlags().StringVar(&maxTotalSizeStr, "max-total-size", "", "Maximum total file size to collect (e.g., 10m, 1g) - empty means no limit")
 	rootCmd.PersistentFlags().StringVarP(&prompt, "prompt", "p", "", "Prompt template name to prepend to output (use predefined templates only)")
 	rootCmd.PersistentFlags().StringVar(&langFlag, "lang", "", "Force language (ja|en) instead of auto-detection")
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "Show version information")
@@ -77,6 +80,21 @@ var rootCmd = &cobra.Command{
 			fmt.Println("list-codes version", version)
 			return
 		}
+
+		// Parse size strings to bytes
+		var err error
+		utils.MaxFileSizeBytes, err = utils.ParseSize(maxFileSizeStr)
+		if err != nil {
+			utils.PrintError(fmt.Sprintf("Invalid --max-file-size: %v", err))
+			os.Exit(1)
+		}
+
+		utils.TotalMaxFileSizeBytes, err = utils.ParseSize(maxTotalSizeStr)
+		if err != nil {
+			utils.PrintError(fmt.Sprintf("Invalid --max-total-size: %v", err))
+			os.Exit(1)
+		}
+
 		excludeNames := make(map[string]struct{})
 		for k := range utils.DefaultExcludeNames {
 			excludeNames[k] = struct{}{}

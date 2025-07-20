@@ -4,6 +4,7 @@ const MaxStructureDepthDefault = 7
 const MaxFileSizeBytesDefault = 1024 * 1024 // 1MB
 
 var MaxFileSizeBytes int64 = MaxFileSizeBytesDefault
+var TotalMaxFileSizeBytes int64 = 0 // 0 means no limit
 
 const DependencyFilesCategory = "Dependency Files"
 
