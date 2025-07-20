@@ -12,16 +12,17 @@ import (
 )
 
 var (
-	folder     string
-	outputFile string
-	readmeOnly bool
-	maxDepth   int
-	debugMode  bool
-	includes   []string
-	excludes   []string
-	prompt     string
-	langFlag   string
-	version    = "dev" // Will be overridden by build flags
+	folder       string
+	outputFile   string
+	readmeOnly   bool
+	maxDepth     int
+	debugMode    bool
+	includes     []string
+	excludes     []string
+	prompt       string
+	langFlag     string
+	version      = "dev" // Will be overridden by build flags
+	includeTests bool
 )
 
 func init() {
@@ -59,6 +60,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&prompt, "prompt", "p", "", "Prompt template name to prepend to output (use predefined templates only)")
 	rootCmd.PersistentFlags().StringVar(&langFlag, "lang", "", "Force language (ja|en) instead of auto-detection")
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "Show version information")
+	rootCmd.PersistentFlags().BoolVar(&includeTests, "include-tests", false, "Include test files in the output")
 
 	// Register custom completion for --prompt flag
 	rootCmd.RegisterFlagCompletionFunc("prompt", promptCompletion)
@@ -122,7 +124,7 @@ var rootCmd = &cobra.Command{
 			outputMD = utils.CollectReadmeFiles(folderAbs, includePaths, excludeNames, excludePaths, debugMode)
 		} else {
 			utils.PrintDebug("Mode: Summarizing project.", debugMode)
-			outputMD = utils.ProcessSourceFiles(folderAbs, maxDepth, includePaths, excludeNames, excludePaths, debugMode)
+			outputMD = utils.ProcessSourceFiles(folderAbs, maxDepth, includePaths, excludeNames, excludePaths, debugMode, includeTests)
 		}
 
 		// Apply prompt if specified

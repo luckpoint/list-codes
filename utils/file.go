@@ -9,91 +9,107 @@ import (
 )
 
 // IsTestFile determines if the specified file path is a test file.
-func IsTestFile(filePath string) bool {
+// It now accepts a debug flag to print its reasoning.
+func IsTestFile(filePath string, debug bool) bool {
 	normalizedPath := filepath.ToSlash(strings.ToLower(filePath))
 	fileName := filepath.Base(normalizedPath)
+
+	// Helper function for logging the decision-making process in debug mode
+	logDecision := func(decision bool, reason string) bool {
+		if debug && decision {
+			PrintDebug(fmt.Sprintf("IsTestFile: Path '%s' identified as test file. Reason: %s", filePath, reason), true)
+		}
+		return decision
+	}
 
 	// 1. Check if the file is in a test directory
 	for _, testDirPattern := range EXCLUDE_TEST_DIRS {
 		if strings.Contains(normalizedPath, testDirPattern) {
-			return true
+			return logDecision(true, "File is in an excluded directory ('"+testDirPattern+"')")
 		}
 	}
 
-	// 2. Check against specific patterns
+	// 2. Check against specific filename patterns (most reliable check)
 	for _, pattern := range EXCLUDE_TEST_PATTERNS {
-		if strings.HasSuffix(fileName, pattern) {
-			return true
+		if strings.HasSuffix(fileName, strings.ToLower(pattern)) {
+			return logDecision(true, "Filename matches pattern '"+pattern+"'")
 		}
 	}
 
-	// 3. Check for common test file naming conventions
+	// 3. Check for common keyword-based naming conventions
 	baseName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 	for _, keyword := range EXCLUDE_TEST_KEYWORDS {
+		// Combined check for prefixes, suffixes, and contains logic
 		if strings.HasPrefix(baseName, keyword) || strings.HasSuffix(baseName, keyword) ||
 			strings.HasPrefix(baseName, keyword+"_") || strings.HasSuffix(baseName, "_"+keyword) ||
 			strings.HasPrefix(baseName, keyword+"-") || strings.HasSuffix(baseName, "-"+keyword) ||
 			strings.Contains(baseName, "_"+keyword+"_") || strings.Contains(baseName, "-"+keyword+"-") {
-			return true
+			return logDecision(true, "Filename ('"+baseName+"') contains keyword '"+keyword+"'")
 		}
 	}
 
 	return false
 }
 
-// shouldSkipDir determines whether to skip directories or files.
+// shouldSkipDir determines whether to skip directories or files based on a set of rules.
+// The logic prioritizes user intent:
+// 1. User-defined exclusions (--exclude) always result in a skip.
+// 2. If --include is used, an item is kept if it's explicitly included or is a parent of an included item.
+//    This rule overrides the default dotfile exclusion.
+// 3. If not explicitly included, any item starting with a '.' is skipped by default.
+// 4. If --include is used and an item is not on the include list (or a parent), it is skipped.
 func shouldSkipDir(fullPath, name string, isDir bool, includePaths, excludeNames, excludePaths map[string]struct{}) bool {
 	absPath, err := filepath.Abs(fullPath)
 	if err != nil {
 		PrintWarning(fmt.Sprintf("Could not get absolute path for %s: %v", fullPath, err), true)
-		return true // 安全のためスキップ
+		return true // Failsafe skip
 	}
 
+	// Priority 1: Explicit --exclude options and hardcoded names always cause a skip.
 	if _, ok := excludeNames[name]; ok {
 		return true
 	}
-
-	if strings.HasPrefix(name, ".") && name != "." && name != ".." {
-		if _, ok := DefaultExcludeNames[name]; ok {
-			return true
-		}
-		if !isDir { // All dot files are excluded
-			return true
-		}
-	}
-
 	if _, ok := excludePaths[absPath]; ok {
 		return true
 	}
 
+	// Priority 2: Whitelisting logic for --include.
+	// If an item is explicitly included or is a parent of an included item,
+	// it should NOT be skipped, even if it's a dotfile.
 	if len(includePaths) > 0 {
-		isIncluded := false
+		isNeededForInclude := false
 		for incPath := range includePaths {
-			if strings.HasPrefix(absPath, incPath) {
-				isIncluded = true
+			// A path is needed if it's the included path itself, or a parent of it.
+			// e.g., include "a/b", current is "a" -> strings.HasPrefix("a/b", "a") -> true
+			// e.g., include "a/b", current is "a/b" -> strings.HasPrefix("a/b", "a/b") -> true
+			if strings.HasPrefix(incPath, absPath) || strings.HasPrefix(absPath, incPath) {
+				isNeededForInclude = true
 				break
 			}
 		}
 
-		if !isIncluded {
-			isParentOfIncluded := false
-			for incPath := range includePaths {
-				if strings.HasPrefix(incPath, absPath) {
-					isParentOfIncluded = true
-					break
-				}
-			}
-			if !isParentOfIncluded {
-				return true
-			}
+		if isNeededForInclude {
+			return false
 		}
 	}
 
+	// Priority 3: Default exclusion for dotfiles and dot-directories.
+	// This runs if the item was not whitelisted by the --include logic above.
+	if strings.HasPrefix(name, ".") && name != "." && name != ".." {
+		return true
+	}
+
+	// Priority 4: If --include is active, skip anything not covered by the whitelist.
+	if len(includePaths) > 0 {
+		return true // Not needed for the include list, so skip.
+	}
+
+	// If no rules caused a skip, process the item.
 	return false
 }
 
 // GenerateDirectoryStructure generates the project directory structure in Markdown format.
-func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, includePaths, excludeNames, excludePaths map[string]struct{}) string {
+func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, includePaths, excludeNames, excludePaths map[string]struct{}, includeTests bool) string {
 	PrintDebug("Generating directory structure...", debugMode)
 	var structureLines []string
 	structureLines = append(structureLines, "## Project Structure", "```text")
@@ -121,8 +137,11 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 		var filteredEntries []os.DirEntry
 		for _, entry := range entries {
 			itemPath := filepath.Join(currentPath, entry.Name())
-			absPath, _ := filepath.Abs(itemPath)
-			if shouldSkipDir(absPath, entry.Name(), entry.IsDir(), includePaths, excludeNames, excludePaths) {
+			if shouldSkipDir(itemPath, entry.Name(), entry.IsDir(), includePaths, excludeNames, excludePaths) {
+				continue
+			}
+			// Skip test files from directory structure
+			if !entry.IsDir() && !includeTests && IsTestFile(itemPath, debugMode) {
 				continue
 			}
 			filteredEntries = append(filteredEntries, entry)
@@ -150,11 +169,16 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 					if err == nil {
 						hasVisibleSubItems := false
 						for _, subEntry := range subEntries {
-							subItemPath, _ := filepath.Abs(filepath.Join(nextPath, subEntry.Name()))
-							if !shouldSkipDir(subItemPath, subEntry.Name(), subEntry.IsDir(), includePaths, excludeNames, excludePaths) {
-								hasVisibleSubItems = true
-								break
+							subItemPath := filepath.Join(nextPath, subEntry.Name())
+							if shouldSkipDir(subItemPath, subEntry.Name(), subEntry.IsDir(), includePaths, excludeNames, excludePaths) {
+								continue
 							}
+							// Skip test files from directory structure
+							if !subEntry.IsDir() && !includeTests && IsTestFile(subItemPath, debugMode) {
+								continue
+							}
+							hasVisibleSubItems = true
+							break
 						}
 						if hasVisibleSubItems {
 							extension := "│   "
@@ -186,16 +210,15 @@ func CollectReadmeFiles(folderAbs string, includePaths, excludeNames, excludePat
 			return nil
 		}
 
-		absPath, _ := filepath.Abs(path)
 		if d.IsDir() {
-			if shouldSkipDir(absPath, d.Name(), true, includePaths, excludeNames, excludePaths) {
-			return filepath.SkipDir
+			if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths) {
+				return filepath.SkipDir
 			}
 			return nil
 		}
 
 		if strings.ToLower(d.Name()) == "readme.md" {
-			if shouldSkipDir(absPath, d.Name(), false, includePaths, excludeNames, excludePaths) {
+			if shouldSkipDir(path, d.Name(), false, includePaths, excludeNames, excludePaths) {
 				return nil
 			}
 
@@ -248,21 +271,21 @@ func collectDependencyFiles(folderAbs string, primaryLangs []string, fallbackLan
 
 	for _, langKey := range effectiveLangsForDeps {
 		if depFiles, ok := FRAMEWORK_DEPENDENCY_FILES[langKey]; ok {
-		for _, depFilePattern := range depFiles {
+			for _, depFilePattern := range depFiles {
 				filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
 					if err != nil {
 						PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, err), debug)
 						return nil
 					}
-					absPath, _ := filepath.Abs(path)
 					if d.IsDir() {
-						if shouldSkipDir(absPath, d.Name(), true, includePaths, excludeNames, excludePaths) {
+						if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths) {
 							return filepath.SkipDir
 						}
 						return nil
 					}
 
 					if d.Name() == depFilePattern {
+						absPath, _ := filepath.Abs(path)
 						if _, ok := processedDepFiles[absPath]; ok {
 							return nil
 						}
@@ -298,7 +321,7 @@ func collectDependencyFiles(folderAbs string, primaryLangs []string, fallbackLan
 }
 
 // collectSourceFiles collects source code files.
-func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool) (map[string][]string, int64, int) {
+func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool) (map[string][]string, int64, int) {
 	sourceFileContents := make(map[string][]string)
 	var totalFileSize int64
 	var skippedFileCount int
@@ -309,23 +332,23 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 			PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, debug), debug)
 			return nil
 		}
-		absPath, _ := filepath.Abs(path)
 
 		if d.IsDir() {
-			if shouldSkipDir(absPath, d.Name(), true, includePaths, excludeNames, excludePaths) {
+			if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		if shouldSkipDir(absPath, d.Name(), false, includePaths, excludeNames, excludePaths) {
+		if shouldSkipDir(path, d.Name(), false, includePaths, excludeNames, excludePaths) {
 			return nil
 		}
 
+		absPath, _ := filepath.Abs(path)
 		if _, ok := processedDepFiles[absPath]; ok {
 			return nil
 		}
-		if IsTestFile(path) {
+		if !includeTests && IsTestFile(path, debug) {
 			return nil
 		}
 
@@ -340,7 +363,7 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		// without requiring additional configuration. If future behaviour needs
 		// to restrict languages, the caller should introduce an explicit filter
 		// rather than relying on this internal function.
-		_ = primaryLangs   // keep referenced to avoid unused parameter compile errors
+		_ = primaryLangs // keep referenced to avoid unused parameter compile errors
 		_ = fallbackLangs
 		processThisFile := true
 
@@ -382,3 +405,4 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 	})
 	return sourceFileContents, totalFileSize, skippedFileCount
 }
+

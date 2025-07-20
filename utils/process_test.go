@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -142,7 +143,7 @@ func TestProcessSourceFiles(t *testing.T) {
 				resolvedIncludePaths[absPath] = struct{}{}
 			}
 
-			actualOutput := ProcessSourceFiles(dir, tt.maxDepth, resolvedIncludePaths, tt.excludeNames, resolvedExcludePaths, tt.debugMode)
+			actualOutput := ProcessSourceFiles(dir, tt.maxDepth, resolvedIncludePaths, tt.excludeNames, resolvedExcludePaths, tt.debugMode, false)
 			actualOutput = strings.ReplaceAll(actualOutput, "\n", "\n")
 
 			for _, expected := range tt.expectedContains {
@@ -153,6 +154,97 @@ func TestProcessSourceFiles(t *testing.T) {
 			for _, unexpected := range tt.expectedNotContains {
 				if strings.Contains(actualOutput, unexpected) {
 					t.Errorf("ProcessSourceFiles() output contains unexpected string:\nUnexpected: %q\nActual:\n%q", unexpected, actualOutput)
+				}
+			}
+		})
+	}
+}
+
+func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
+	tempDir := t.TempDir()
+	
+	// Create test files structure
+	testFiles := map[string]string{
+		"main.go":           "package main\n\nfunc main() {\n\tprintln(\"Hello World\")\n}",
+		"service.go":        "package main\n\nfunc Service() {\n\t// service logic\n}",
+		"main_test.go":      "package main\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {\n\t// test main\n}",
+		"service_test.go":   "package main\n\nimport \"testing\"\n\nfunc TestService(t *testing.T) {\n\t// test service\n}", 
+		"utils/helper.go":   "package utils\n\nfunc Helper() {\n\t// helper logic\n}",
+		"utils/helper_test.go": "package utils\n\nimport \"testing\"\n\nfunc TestHelper(t *testing.T) {\n\t// test helper\n}",
+		"tests/test_setup.py": "# test setup\ndef setup():\n    pass",
+		"go.mod":            "module test\n\ngo 1.19",
+	}
+	
+	for filePath, content := range testFiles {
+		fullPath := filepath.Join(tempDir, filePath)
+		err := os.MkdirAll(filepath.Dir(fullPath), 0755)
+		if err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+		err = os.WriteFile(fullPath, []byte(content), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create file %s: %v", filePath, err)
+		}
+	}
+	
+	tests := []struct {
+		name                string
+		includeTests        bool
+		expectedContains    []string
+		expectedNotContains []string
+	}{
+		{
+			name:         "exclude tests (default behavior)",
+			includeTests: false,
+			expectedContains: []string{
+				"## Project Structure", 
+				"## Source Code Files",
+				"main.go", 
+				"service.go", 
+				"helper.go",
+			},
+			expectedNotContains: []string{
+				"main_test.go", 
+				"service_test.go", 
+				"helper_test.go",
+				"test_setup.py",
+			},
+		},
+		{
+			name:         "include tests",
+			includeTests: true,
+			expectedContains: []string{
+				"## Project Structure", 
+				"## Source Code Files",
+				"main.go", 
+				"service.go", 
+				"helper.go",
+				"main_test.go", 
+				"service_test.go", 
+				"helper_test.go",
+				"test_setup.py",
+			},
+			expectedNotContains: []string{},
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			includePaths := make(map[string]struct{})
+			excludeNames := make(map[string]struct{})
+			excludePaths := make(map[string]struct{})
+			
+			output := ProcessSourceFiles(tempDir, 10, includePaths, excludeNames, excludePaths, false, tt.includeTests)
+			
+			for _, expected := range tt.expectedContains {
+				if !strings.Contains(output, expected) {
+					t.Errorf("Expected ProcessSourceFiles output to contain %q when includeTests=%v, but it did not\nOutput:\n%s", expected, tt.includeTests, output)
+				}
+			}
+			
+			for _, unexpected := range tt.expectedNotContains {
+				if strings.Contains(output, unexpected) {
+					t.Errorf("Expected ProcessSourceFiles output not to contain %q when includeTests=%v, but it did\nOutput:\n%s", unexpected, tt.includeTests, output)
 				}
 			}
 		})

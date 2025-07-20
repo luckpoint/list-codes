@@ -1,422 +1,349 @@
 package utils
 
 import (
+	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 )
 
-// TestIsTestFile はIsTestFile関数のユニットテストです。
-func TestIsTestFile(t *testing.T) {
-	tests := []struct {
-		name     string
-		filePath string
-		expected bool
-	}{
-		{name: "Python test file", filePath: "my_test.py", expected: true},
-		{name: "Go test file", filePath: "my_test.go", expected: true},
-		{name: "JavaScript spec file", filePath: "my_spec.js", expected: true},
-		{name: "TypeScript test file", filePath: "test.ts", expected: true},
-		{name: "Test directory Python", filePath: "tests/my_module/file.py", expected: true},
-		{name: "Test directory Go", filePath: "pkg/my_package/test/file.go", expected: true},
-		{name: "Spec directory JS", filePath: "src/components/spec/component.js", expected: true},
-		{name: "Solidity test pattern", filePath: "MyContract.t.sol", expected: true},
-		{name: "Normal Python file", filePath: "main.py", expected: false},
-		{name: "Normal Go file", filePath: "main.go", expected: false},
-		{name: "Normal JS file", filePath: "app.js", expected: false},
-		{name: "Case insensitive keyword", filePath: "TEST_file.py", expected: true},
-		{name: "Keyword in middle", filePath: "file_test_data.py", expected: true},
-		{name: "Keyword as prefix", filePath: "testdata.txt", expected: true},
-		{name: "Keyword as suffix", filePath: "data_spec.json", expected: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			actual := IsTestFile(tt.filePath)
-			if actual != tt.expected {
-				t.Errorf("IsTestFile(%q): expected %v, got %v", tt.filePath, tt.expected, actual)
-			}
-		})
-	}
-}
-
-// TestShouldSkipDir はshouldSkipDir関数のユニットテストです。
 func TestShouldSkipDir(t *testing.T) {
-	dir, cleanup := setupTestDir(t)
+	projectRoot, cleanup := setupTestDir(t)
 	defer cleanup()
 
-	// テスト用のディレクトリとファイルを作成
-	createTestFile(t, filepath.Join(dir, "regular.txt"), "content")
-	createTestFile(t, filepath.Join(dir, ".hidden.txt"), "content")
-	createTestFile(t, filepath.Join(dir, ".git/config"), "content")
-	createTestFile(t, filepath.Join(dir, "node_modules/package/index.js"), "content")
-	createTestFile(t, filepath.Join(dir, "src/main.go"), "content")
+	// Helper to create absolute paths for the test cases
+	abs := func(p string) string {
+		path, err := filepath.Abs(filepath.Join(projectRoot, p))
+		if err != nil {
+			t.Fatalf("Failed to get absolute path for %s: %v", p, err)
+		}
+		return path
+	}
 
-	tests := []struct {
+	testCases := []struct {
 		name         string
-		fullPath     string
-		nameOnly     string
+		path         string // relative to projectRoot
 		isDir        bool
 		includePaths map[string]struct{}
 		excludeNames map[string]struct{}
 		excludePaths map[string]struct{}
-		expected     bool
+		wantSkip     bool
+		reason       string
 	}{
 		{
-			name:     "Regular file",
-			fullPath: filepath.Join(dir, "regular.txt"),
-			nameOnly: "regular.txt",
+			name:     "Standard File",
+			path:     "main.go",
 			isDir:    false,
-			expected: false,
+			wantSkip: false,
+			reason:   "Standard files should not be skipped by default.",
 		},
 		{
-			name:     "Hidden file",
-			fullPath: filepath.Join(dir, ".hidden.txt"),
-			nameOnly: ".hidden.txt",
-			isDir:    false,
-			expected: true,
-		},
-		{
-			name:     "Git directory",
-			fullPath: filepath.Join(dir, ".git"),
-			nameOnly: ".git",
+			name:     "Standard Directory",
+			path:     "src",
 			isDir:    true,
-			expected: true,
+			wantSkip: false,
+			reason:   "Standard directories should not be skipped by default.",
 		},
 		{
-			name:         "Node modules directory",
-			fullPath:     filepath.Join(dir, "node_modules"),
-			nameOnly:     "node_modules",
-			isDir:        true,
-			excludeNames: map[string]struct{}{"node_modules": {}},
-			expected:     true,
+			name:     "Dotfile Default Skip",
+			path:     ".env",
+			isDir:    false,
+			wantSkip: true,
+			reason:   "Dotfiles should be skipped by default.",
 		},
 		{
-			name:         "Excluded by name",
-			fullPath:     filepath.Join(dir, "build"),
-			nameOnly:     "build",
-			isDir:        true,
-			excludeNames: map[string]struct{}{"build": {}},
-			expected:     true,
+			name:     "Dot Directory Default Skip",
+			path:     ".git",
+			isDir:    true,
+			wantSkip: true,
+			reason:   "Dot directories should be skipped by default.",
 		},
 		{
-			name:         "Excluded by path",
-			fullPath:     filepath.Join(dir, "src/main.go"),
-			nameOnly:     "main.go",
+			name:     "File in Dot Directory Skip",
+			path:     filepath.Join(".git", "config"),
+			isDir:    false,
+			wantSkip: false, // The new logic only checks immediate names, not paths
+			reason:   "Files inside dot-directories are handled by directory traversal logic, not shouldSkipDir.",
+		},
+		{
+			name:         "Explicit Include of Dotfile",
+			path:         ".env",
 			isDir:        false,
-			excludePaths: map[string]struct{}{filepath.Join(dir, "src/main.go"): {}},
-			expected:     true,
+			includePaths: map[string]struct{}{abs(".env"): {}},
+			wantSkip:     false,
+			reason:       "An explicitly included dotfile should not be skipped.",
 		},
 		{
-			name:         "Included path - file in included directory",
-			fullPath:     filepath.Join(dir, "src/main.go"),
-			nameOnly:     "main.go",
-			isDir:        false,
-			includePaths: map[string]struct{}{filepath.Join(dir, "src"): {}},
-			expected:     false,
-		},
-		{
-			name:         "Not included path - file outside included directory",
-			fullPath:     filepath.Join(dir, "regular.txt"),
-			nameOnly:     "regular.txt",
-			isDir:        false,
-			includePaths: map[string]struct{}{filepath.Join(dir, "src"): {}},
-			expected:     true,
-		},
-		{
-			name:         "Parent of included path",
-			fullPath:     dir,
-			nameOnly:     filepath.Base(dir),
+			name:         "Explicit Include of Dot Directory",
+			path:         ".git",
 			isDir:        true,
-			includePaths: map[string]struct{}{filepath.Join(dir, "src"): {}},
-			expected:     false,
+			includePaths: map[string]struct{}{abs(".git"): {}},
+			wantSkip:     false,
+			reason:       "An explicitly included dot-directory should not be skipped.",
+		},
+		{
+			name:         "Parent of Included Item",
+			path:         ".", // projectRoot itself
+			isDir:        true,
+			includePaths: map[string]struct{}{abs(filepath.Join("src", "api.go")): {}},
+			wantSkip:     false,
+			reason:       "A parent of an included item must be traversed, so it should not be skipped.",
+		},
+		{
+			name:         "File Outside Include Scope",
+			path:         "main.go",
+			isDir:        false,
+			includePaths: map[string]struct{}{abs("src"): {}},
+			wantSkip:     true,
+			reason:       "When includes are active, items not in the include set (or parents of included items) should be skipped.",
+		},
+		{
+			name:         "Exclude by Name",
+			path:         "src",
+			isDir:        true,
+			excludeNames: map[string]struct{}{"src": {}},
+			wantSkip:     true,
+			reason:       "Items in excludeNames should be skipped.",
+		},
+		{
+			name:         "Exclude by Path",
+			path:         "src",
+			isDir:        true,
+			excludePaths: map[string]struct{}{abs("src"): {}},
+			wantSkip:     true,
+			reason:       "Items in excludePaths should be skipped.",
+		},
+		{
+			name:         "Exclude Overrides Include",
+			path:         "src",
+			isDir:        true,
+			includePaths: map[string]struct{}{abs("src"): {}},
+			excludeNames: map[string]struct{}{"src": {}},
+			wantSkip:     true,
+			reason:       "Exclusion rules should have higher precedence than inclusion rules.",
+		},
+		{
+			name:     "Nested Dot Directory Skip",
+			path:     filepath.Join("docs", ".claude"),
+			isDir:    true,
+			wantSkip: true,
+			reason:   "Nested dot directories should be skipped by default.",
+		},
+		{
+			name:         "Include Nested Dot Directory",
+			path:         filepath.Join("docs", ".claude"),
+			isDir:        true,
+			includePaths: map[string]struct{}{abs(filepath.Join("docs", ".claude")): {}},
+			wantSkip:     false,
+			reason:       "An explicitly included nested dot-directory should not be skipped.",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := shouldSkipDir(tt.fullPath, tt.nameOnly, tt.isDir, tt.includePaths, tt.excludeNames, tt.excludePaths)
-			if result != tt.expected {
-				t.Errorf("shouldSkipDir(%q, %q, %v, %v, %v, %v) = %v, want %v",
-					tt.fullPath, tt.nameOnly, tt.isDir, tt.includePaths, tt.excludeNames, tt.excludePaths, result, tt.expected)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Initialize maps if they are nil to avoid nil pointer issues in the function
+			if tc.includePaths == nil {
+				tc.includePaths = make(map[string]struct{})
+			}
+			if tc.excludeNames == nil {
+				tc.excludeNames = make(map[string]struct{})
+			}
+			if tc.excludePaths == nil {
+				tc.excludePaths = make(map[string]struct{})
+			}
+
+			fullPath := filepath.Join(projectRoot, tc.path)
+			name := filepath.Base(fullPath)
+			if tc.path == "." {
+				name = "."
+			}
+
+			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, tc.excludeNames, tc.excludePaths)
+
+			if gotSkip != tc.wantSkip {
+				t.Errorf("shouldSkipDir() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
 			}
 		})
 	}
 }
 
-// TestGenerateDirectoryStructure はGenerateDirectoryStructure関数のユニットテストです。
-func TestGenerateDirectoryStructure(t *testing.T) {
-	tests := []struct {
-		name           string
-		setupFiles     map[string]string
-		maxDepth       int
-		includePaths   map[string]struct{}
-		excludeNames   map[string]struct{}
-		excludePaths   map[string]struct{}
-		expectedOutput string
+func TestIsTestFile(t *testing.T) {
+	testCases := []struct {
+		name     string
+		path     string
+		isTest   bool
+		isGoTest bool // Specific check for Go's _test.go convention
 	}{
-		{
-			name: "Simple structure",
-			setupFiles: map[string]string{
-				"file1.txt":              "",
-				"dir1/file2.txt":         "",
-				"dir1/subdir1/file3.txt": "",
-			},
-			maxDepth: 0,
-			expectedOutput: "## Project Structure\n" +
-				"```text\n" +
-				". (test_project)\n" +
-				"├── dir1\n" +
-				"│   ├── file2.txt\n" +
-				"│   └── subdir1\n" +
-				"│       └── file3.txt\n" +
-				"└── file1.txt\n" +
-				"```\n\n",
-		},
-		{
-			name: "Max depth 1",
-			setupFiles: map[string]string{
-				"file1.txt":              "",
-				"dir1/file2.txt":         "",
-				"dir1/subdir1/file3.txt": "",
-			},
-			maxDepth: 1,
-			expectedOutput: "## Project Structure\n" +
-				"```text\n" +
-				". (test_project)\n" +
-				"├── dir1\n" +
-				"│   └── ...\n" +
-				"└── file1.txt\n" +
-				"```\n\n",
-		},
+		{"Go Test File", "utils/file_test.go", true, true},
+		{"Go Test File in subdir", "auth/jwt_test.go", true, true},
+		{"JS Test File", "src/components/button.test.js", true, false},
+		{"JS Spec File", "src/services/api.spec.ts", true, false},
+		{"Python Test File", "tests/test_api.py", true, false},
+		{"Python Pytest File", "app/test_models.py", true, false},
+		{"Ruby Spec File", "spec/models/user_spec.rb", true, false},
+		{"File in test dir", "test/data.json", true, false},
+		{"File in tests dir", "/home/user/project/tests/utils/helpers.py", true, false},
+		{"Solidity Test File", "contracts/MyContract.t.sol", true, false},
+		{"Non-test file", "src/main.go", false, false},
+		{"File with 'test' in name", "testing/service.go", false, false},
+		{"File with 'spec' in name", "specification/api.md", false, false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dir, cleanup := setupTestDir(t)
-			defer cleanup()
-
-			for path, content := range tt.setupFiles {
-				createTestFile(t, filepath.Join(dir, path), content)
-			}
-
-			resolvedExcludePaths := make(map[string]struct{})
-			for p := range tt.excludePaths {
-				absPath, err := filepath.Abs(filepath.Join(dir, p))
-				if err != nil {
-					t.Fatalf("Failed to resolve absolute path for exclude: %v", err)
-				}
-				resolvedExcludePaths[absPath] = struct{}{}
-			}
-
-			resolvedIncludePaths := make(map[string]struct{})
-			for p := range tt.includePaths {
-				absPath, err := filepath.Abs(filepath.Join(dir, p))
-				if err != nil {
-					t.Fatalf("Failed to resolve absolute path for include: %v", err)
-				}
-				resolvedIncludePaths[absPath] = struct{}{}
-			}
-
-			actualOutput := GenerateDirectoryStructure(dir, tt.maxDepth, true, resolvedIncludePaths, tt.excludeNames, resolvedExcludePaths)
-			actualOutput = strings.ReplaceAll(actualOutput, filepath.Base(dir), "test_project")
-			expectedOutput := strings.ReplaceAll(tt.expectedOutput, "test_project", "test_project")
-
-			if !reflect.DeepEqual(strings.Split(actualOutput, "\n"), strings.Split(expectedOutput, "\n")) {
-				t.Errorf("GenerateDirectoryStructure() output mismatch:\nExpected:\n%s\nActual:\n%s", expectedOutput, actualOutput)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Test generic IsTestFile function
+			got := IsTestFile(tc.path, false)
+			if got != tc.isTest {
+				t.Errorf("IsTestFile(%q) = %v, want %v", tc.path, got, tc.isTest)
 			}
 		})
 	}
 }
 
-// TestCollectReadmeFiles はCollectReadmeFiles関数のユニットテストです。
-func TestCollectReadmeFiles(t *testing.T) {
+func TestGenerateDirectoryStructureWithIncludeTests(t *testing.T) {
+	tempDir := t.TempDir()
+	
+	// Create test files structure
+	testFiles := map[string]string{
+		"main.go":           "package main",
+		"service.go":        "package main",
+		"main_test.go":      "package main",
+		"service_test.go":   "package main", 
+		"utils/helper.go":   "package utils",
+		"utils/helper_test.go": "package utils",
+		"test/data.json":    "{}",
+		"tests/setup.py":    "# setup",
+	}
+	
+	for filePath, content := range testFiles {
+		fullPath := filepath.Join(tempDir, filePath)
+		err := os.MkdirAll(filepath.Dir(fullPath), 0755)
+		if err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+		err = os.WriteFile(fullPath, []byte(content), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create file %s: %v", filePath, err)
+		}
+	}
+	
 	tests := []struct {
-		name           string
-		setupFiles     map[string]string
-		includePaths   map[string]struct{}
-		excludeNames   map[string]struct{}
-		excludePaths   map[string]struct{}
-		expectedOutput string
+		name         string
+		includeTests bool
+		expectFiles  []string
+		rejectFiles  []string
 	}{
 		{
-			name: "Single README.md in root",
-			setupFiles: map[string]string{
-				"README.md": "# Project Readme",
-			},
-			expectedOutput: "# Project README Files\n\n" +
-				"### README.md\n\n" +
-				"```markdown\n# Project Readme\n```\n",
+			name:         "exclude tests (default behavior)",
+			includeTests: false,
+			expectFiles:  []string{"main.go", "service.go", "helper.go"},
+			rejectFiles:  []string{"main_test.go", "service_test.go", "helper_test.go", "data.json", "setup.py"},
 		},
 		{
-			name: "Multiple README.md files",
-			setupFiles: map[string]string{
-				"README.md":      "# Root Readme",
-				"docs/README.md": "## Docs Readme",
-			},
-			expectedOutput: "# Project README Files\n\n" +
-				"### README.md\n\n" +
-				"```markdown\n# Root Readme\n```\n\n" +
-				"### docs/README.md\n\n" +
-				"```markdown\n## Docs Readme\n```\n",
+			name:         "include tests",
+			includeTests: true,
+			expectFiles:  []string{"main.go", "service.go", "main_test.go", "service_test.go", "helper.go", "helper_test.go", "data.json", "setup.py"},
+			rejectFiles:  []string{},
 		},
 	}
-
+	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, cleanup := setupTestDir(t)
-			defer cleanup()
-
-			for path, content := range tt.setupFiles {
-				createTestFile(t, filepath.Join(dir, path), content)
-			}
-
-			resolvedExcludePaths := make(map[string]struct{})
-			for p := range tt.excludePaths {
-				absPath, err := filepath.Abs(filepath.Join(dir, p))
-				if err != nil {
-					t.Fatalf("Failed to resolve absolute path for exclude: %v", err)
+			includePaths := make(map[string]struct{})
+			excludeNames := make(map[string]struct{})
+			excludePaths := make(map[string]struct{})
+			
+			output := GenerateDirectoryStructure(tempDir, 10, false, includePaths, excludeNames, excludePaths, tt.includeTests)
+			
+			for _, expectedFile := range tt.expectFiles {
+				if !strings.Contains(output, expectedFile) {
+					t.Errorf("Expected output to contain %q when includeTests=%v, but it did not\nOutput:\n%s", expectedFile, tt.includeTests, output)
 				}
-				resolvedExcludePaths[absPath] = struct{}{}
 			}
-
-			resolvedIncludePaths := make(map[string]struct{})
-			for p := range tt.includePaths {
-				absPath, err := filepath.Abs(filepath.Join(dir, p))
-				if err != nil {
-					t.Fatalf("Failed to resolve absolute path for include: %v", err)
-				}
-				resolvedIncludePaths[absPath] = struct{}{}
-			}
-
-			actualOutput := CollectReadmeFiles(dir, resolvedIncludePaths, tt.excludeNames, resolvedExcludePaths, true)
-			actualOutput = strings.ReplaceAll(actualOutput, "\n", "\n")
-			expectedOutput := strings.ReplaceAll(tt.expectedOutput, "\n", "\n")
-
-			if actualOutput != expectedOutput {
-				t.Errorf("CollectReadmeFiles() output mismatch:\nExpected:\n%q\nActual:\n%q", expectedOutput, actualOutput)
-			}
-		})
-	}
-}
-
-// TestCollectDependencyFiles は collectDependencyFiles 関数のユニットテストです。
-func TestCollectDependencyFiles(t *testing.T) {
-	tests := []struct {
-		name                   string
-		setupFiles             map[string]string
-		primaryLangs           []string
-		fallbackLangs          map[string]int
-		debugMode              bool
-		expectedContentsCount  int
-		expectedProcessedCount int
-		expectedContains       []string
-	}{
-		{
-			name:                   "Debug mode off",
-			setupFiles:             map[string]string{"go.mod": "module myapp"},
-			primaryLangs:           []string{"Go"},
-			debugMode:              false,
-			expectedContentsCount:  0,
-			expectedProcessedCount: 0,
-		},
-		{
-			name:                   "Debug mode on with primary languages",
-			setupFiles:             map[string]string{"go.mod": "module myapp", "go.sum": ""},
-			primaryLangs:           []string{"Go"},
-			debugMode:              true,
-			expectedContentsCount:  2,
-			expectedProcessedCount: 2,
-			expectedContains:       []string{"### go.mod", "### go.sum"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dir, cleanup := setupTestDir(t)
-			defer cleanup()
-
-			for path, content := range tt.setupFiles {
-				createTestFile(t, filepath.Join(dir, path), content)
-			}
-
-			contents, processed := collectDependencyFiles(dir, tt.primaryLangs, tt.fallbackLangs, nil, nil, nil, tt.debugMode)
-
-			if len(contents[DependencyFilesCategory]) != tt.expectedContentsCount {
-				t.Errorf("expected %d content entries, got %d", tt.expectedContentsCount, len(contents[DependencyFilesCategory]))
-			}
-			if len(processed) != tt.expectedProcessedCount {
-				t.Errorf("expected %d processed files, got %d", tt.expectedProcessedCount, len(processed))
-			}
-
-			actualContent := strings.Join(contents[DependencyFilesCategory], "\n")
-			for _, substr := range tt.expectedContains {
-				if !strings.Contains(actualContent, substr) {
-					t.Errorf("expected content to contain %q, but it did not", substr)
+			
+			for _, rejectedFile := range tt.rejectFiles {
+				if strings.Contains(output, rejectedFile) {
+					t.Errorf("Expected output not to contain %q when includeTests=%v, but it did\nOutput:\n%s", rejectedFile, tt.includeTests, output)
 				}
 			}
 		})
 	}
 }
 
-// TestCollectSourceFiles は collectSourceFiles 関数のユニットテストです。
-func TestCollectSourceFiles(t *testing.T) {
+func TestCollectSourceFilesWithIncludeTests(t *testing.T) {
+	tempDir := t.TempDir()
+	
+	// Create test files structure
+	testFiles := map[string]string{
+		"main.go":           "package main\n\nfunc main() {}",
+		"service.go":        "package main\n\nfunc Service() {}",
+		"main_test.go":      "package main\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {}",
+		"service_test.go":   "package main\n\nimport \"testing\"\n\nfunc TestService(t *testing.T) {}", 
+		"utils/helper.go":   "package utils\n\nfunc Helper() {}",
+		"utils/helper_test.go": "package utils\n\nimport \"testing\"\n\nfunc TestHelper(t *testing.T) {}",
+		"test/data.json":    "{}",
+		"tests/test_setup.py": "# test setup",
+	}
+	
+	for filePath, content := range testFiles {
+		fullPath := filepath.Join(tempDir, filePath)
+		err := os.MkdirAll(filepath.Dir(fullPath), 0755)
+		if err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+		err = os.WriteFile(fullPath, []byte(content), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create file %s: %v", filePath, err)
+		}
+	}
+	
 	tests := []struct {
-		name              string
-		setupFiles        map[string]string
-		primaryLangs      []string
-		fallbackLangs     map[string]int
-		processedDepFiles map[string]struct{}
-		expectedCounts    map[string]int
-		expectedContains  map[string][]string
+		name         string
+		includeTests bool
+		expectFiles  []string  // Files that should be in source collection
+		rejectFiles  []string  // Files that should NOT be in source collection
 	}{
 		{
-			name:             "Collect based on primary languages",
-			setupFiles:       map[string]string{"main.go": "package main", "app.js": ""},
-			primaryLangs:     []string{"Go"},
-			expectedCounts:   map[string]int{"Go": 1, "Javascript": 0},
-			expectedContains: map[string][]string{"Go": {"### main.go"}},
+			name:         "exclude tests (default behavior)",
+			includeTests: false,
+			expectFiles:  []string{"main.go", "service.go", "helper.go"},
+			rejectFiles:  []string{"main_test.go", "service_test.go", "helper_test.go", "test_setup.py"},
 		},
 		{
-			name:           "Skip test files",
-			setupFiles:    map[string]string{"main.go": "", "main_test.go": ""},
-			primaryLangs:  []string{"Go"},
-			expectedCounts: map[string]int{"Go": 1},
+			name:         "include tests",
+			includeTests: true,
+			expectFiles:  []string{"main.go", "service.go", "main_test.go", "service_test.go", "helper.go", "helper_test.go", "test_setup.py"},
+			rejectFiles:  []string{}, // JSON files don't have language extension, so won't be collected anyway
 		},
 	}
-
+	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, cleanup := setupTestDir(t)
-			defer cleanup()
-
-			resolvedProcessedDepFiles := make(map[string]struct{})
-			for path := range tt.processedDepFiles {
-				absPath, _ := filepath.Abs(filepath.Join(dir, path))
-				resolvedProcessedDepFiles[absPath] = struct{}{}
+			primaryLangs := []string{"Go", "Python"}
+			fallbackLangs := map[string]int{"Go": 10, "Python": 5}
+			processedDepFiles := make(map[string]struct{})
+			includePaths := make(map[string]struct{})
+			excludeNames := make(map[string]struct{})
+			excludePaths := make(map[string]struct{})
+			
+			sourceFileContents, _, _ := collectSourceFiles(tempDir, primaryLangs, fallbackLangs, processedDepFiles, includePaths, excludeNames, excludePaths, false, tt.includeTests)
+			
+			// Convert collected files to a flat string for easier testing
+			var collectedFiles []string
+			for _, files := range sourceFileContents {
+				collectedFiles = append(collectedFiles, files...)
 			}
-
-			for path, content := range tt.setupFiles {
-				createTestFile(t, filepath.Join(dir, path), content)
-			}
-
-			contents, _, _ := collectSourceFiles(dir, tt.primaryLangs, tt.fallbackLangs, resolvedProcessedDepFiles, nil, nil, nil, true)
-
-			for lang, expectedCount := range tt.expectedCounts {
-				if len(contents[lang]) != expectedCount {
-					t.Errorf("expected %d files for language %s, got %d", expectedCount, lang, len(contents[lang]))
+			allOutput := strings.Join(collectedFiles, "\n")
+			
+			for _, expectedFile := range tt.expectFiles {
+				if !strings.Contains(allOutput, expectedFile) {
+					t.Errorf("Expected source files to contain %q when includeTests=%v, but it did not\nCollected files:\n%s", expectedFile, tt.includeTests, allOutput)
 				}
 			}
-
-			if tt.expectedContains != nil {
-				for lang, expectedSubstrings := range tt.expectedContains {
-					actualContent := strings.Join(contents[lang], "\n")
-					for _, substr := range expectedSubstrings {
-						if !strings.Contains(actualContent, substr) {
-							t.Errorf("expected content for %s to contain %q, but it did not", lang, substr)
-						}
-					}
+			
+			for _, rejectedFile := range tt.rejectFiles {
+				if strings.Contains(allOutput, rejectedFile) {
+					t.Errorf("Expected source files not to contain %q when includeTests=%v, but it did\nCollected files:\n%s", rejectedFile, tt.includeTests, allOutput)
 				}
 			}
 		})

@@ -8,25 +8,16 @@ var MaxFileSizeBytes int64 = MaxFileSizeBytesDefault
 const DependencyFilesCategory = "Dependency Files"
 
 // DefaultExcludeNames contains default directory and file names to exclude by name.
+// Dotfiles are now handled by a general rule in shouldSkipDir
 var DefaultExcludeNames = map[string]struct{}{
-	".git":           {},
-	"node_modules":   {},
-	"vendor":         {},
-	"target":         {},
-	"build":          {},
-	"dist":           {},
-	"__pycache__":    {},
-	".venv":          {},
-	".vscode":        {},
-	".idea":          {},
-	".serverless":    {},
-	".terraform":     {},
-	".pytest_cache":  {},
-	".mypy_cache":    {},
-	".ruff_cache":    {},
-	"env":            {},
-	"venv":           {},
-	".DS_Store":      {}, // Include files in exclusion
+	"node_modules": {},
+	"vendor":       {},
+	"target":       {},
+	"build":        {},
+	"dist":         {},
+	"__pycache__":  {},
+	"env":          {},
+	"venv":         {},
 }
 
 // PROJECT_SIGNATURES contains signature files/directories for detecting project languages/frameworks.
@@ -179,10 +170,76 @@ var FRAMEWORK_DEPENDENCY_FILES = map[string][]string{
 }
 
 // EXCLUDE_TEST_KEYWORDS contains keywords for identifying test files.
-var EXCLUDE_TEST_KEYWORDS = []string{"test", "spec"}
+// The IsTestFile function performs a case-insensitive check against the base filename.
+var EXCLUDE_TEST_KEYWORDS = []string{
+	"test",      // Covers "test_*.py", "*.test.js", "Test*.java", etc.
+	"spec",      // Covers "*.spec.js", "*_spec.rb", etc.
+	"e2e",       // For end-to-end tests
+	"benchmark", // For benchmark files
+	"bench",     // A common shorthand for benchmark
+	"mock",      // For mock files
+	"fixture",   // For test fixtures
+}
 
 // EXCLUDE_TEST_DIRS contains directory paths for identifying test files.
-var EXCLUDE_TEST_DIRS = []string{"/test/", "/tests/", "/spec/", "test/", "tests/", "spec/"}
+// The IsTestFile function checks if the file's path contains any of these strings.
+var EXCLUDE_TEST_DIRS = []string{
+	"/test/",      // Root-level "test" folder
+	"/tests/",     // Root-level "tests" folder
+	"/spec/",      // Root-level "spec" folder
+	"/specs/",     // Root-level "specs" folder
+	"/__tests__/", // A common convention in Jest (JavaScript)
+	"/__test__/",  // Alternative Jest convention
+	"/testing/",   // Generic testing folder
+	"/fixtures/",  // Test fixtures
+	"/mocks/",     // Mock files
+	"/e2e/",       // End-to-end tests
+	"/integration/", // Integration tests
+	"/unit/",      // Unit tests
+	"test/",       // "test" folder at any depth
+	"tests/",      // "tests" folder at any depth
+	"spec/",       // "spec" folder at any depth
+	"specs/",      // "specs" folder at any depth
+}
 
-// EXCLUDE_TEST_PATTERNS contains file name patterns for identifying test files.
-var EXCLUDE_TEST_PATTERNS = []string{".t.sol"}
+// EXCLUDE_TEST_PATTERNS contains specific filename patterns to identify test files.
+// This is useful for conventions not easily caught by keywords alone.
+var EXCLUDE_TEST_PATTERNS = []string{
+	"_test.go",    // Go
+	"_spec.rb",    // Ruby (RSpec)
+	".test.js",    // JavaScript
+	".spec.js",    // JavaScript
+	".test.jsx",   // React (JSX)
+	".spec.jsx",   // React (JSX)
+	".test.ts",    // TypeScript
+	".spec.ts",    // TypeScript
+	".test.tsx",   // React TypeScript
+	".spec.tsx",   // React TypeScript
+	".test.py",    // Python
+	".spec.py",    // Python
+	"Test.java",   // Java (JUnit style)
+	"Tests.java",  // Java (alternative)
+	"IT.java",     // Java Integration Tests
+	".test.php",   // PHP
+	".spec.php",   // PHP
+	"_test.rb",    // Ruby (Test::Unit style)
+	".test.cs",    // C#
+	".spec.cs",    // C#
+	"Test.cs",     // C# (NUnit style)
+	"Tests.cs",    // C# (alternative)
+	".test.cpp",   // C++
+	".spec.cpp",   // C++
+	".test.c",     // C
+	".spec.c",     // C
+	".test.rs",    // Rust
+	".spec.rs",    // Rust
+	".test.kt",    // Kotlin
+	".spec.kt",    // Kotlin
+	"Test.kt",     // Kotlin (JUnit style)
+	".test.swift", // Swift
+	".spec.swift", // Swift
+	"Test.swift",  // Swift (XCTest style)
+	".t.sol",      // Solidity (Foundry)
+	".test.sol",   // Solidity (alternative)
+	".spec.sol",   // Solidity (alternative)
+}
