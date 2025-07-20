@@ -326,7 +326,7 @@ func TestCollectSourceFilesWithIncludeTests(t *testing.T) {
 			excludeNames := make(map[string]struct{})
 			excludePaths := make(map[string]struct{})
 			
-			sourceFileContents, _, _ := collectSourceFiles(tempDir, primaryLangs, fallbackLangs, processedDepFiles, includePaths, excludeNames, excludePaths, false, tt.includeTests)
+			sourceFileContents, _, _, _ := collectSourceFiles(tempDir, primaryLangs, fallbackLangs, processedDepFiles, includePaths, excludeNames, excludePaths, false, tt.includeTests)
 			
 			// Convert collected files to a flat string for easier testing
 			var collectedFiles []string

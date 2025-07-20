@@ -321,10 +321,11 @@ func collectDependencyFiles(folderAbs string, primaryLangs []string, fallbackLan
 }
 
 // collectSourceFiles collects source code files.
-func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool) (map[string][]string, int64, int) {
+func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool) (map[string][]string, int64, int, string) {
 	sourceFileContents := make(map[string][]string)
 	var totalFileSize int64
 	var skippedFileCount int
+	var allContent strings.Builder
 	PrintDebug("Processing source files...", debug)
 
 	filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
@@ -390,6 +391,10 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 			PrintWarning(fmt.Sprintf("Could not read source file '%s': %v", path, debug), debug)
 			return nil
 		}
+		
+		// Add content to the combined content for token counting
+		allContent.Write(content)
+		
 		fileDisplayName, relErr := filepath.Rel(folderAbs, path)
 		if relErr != nil {
 			PrintWarning(fmt.Sprintf("Could not get relative path for %s: %v", path, relErr), debug)
@@ -403,6 +408,6 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		sourceFileContents[language] = append(sourceFileContents[language], markdownContent)
 		return nil
 	})
-	return sourceFileContents, totalFileSize, skippedFileCount
+	return sourceFileContents, totalFileSize, skippedFileCount, allContent.String()
 }
 

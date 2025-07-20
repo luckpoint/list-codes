@@ -46,7 +46,7 @@ func TestBuildMarkdownOutput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output := buildMarkdownOutput(tt.directoryStructureMD, tt.depFileContents, tt.sourceFileContents, 1024, 0, tt.debugMode)
+			output := buildMarkdownOutput(tt.directoryStructureMD, tt.depFileContents, tt.sourceFileContents, 1024, 0, tt.debugMode, "")
 
 			for _, substr := range tt.expectedContains {
 				if !strings.Contains(output, substr) {
