@@ -54,7 +54,7 @@ list-codes | pbcopy
 list-codes --prompt refactor --folder ./src/feature | gemini
 
 # Generate a project overview
-list-codes --prompt explain --folder . > project_overview.txt
+list-codes --prompt explain > project_overview.txt
 # (Then, pass the content of project_overview.txt to the LLM)
 ```
 
