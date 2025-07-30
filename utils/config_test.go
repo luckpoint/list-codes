@@ -20,6 +20,8 @@ func TestDefaultExcludeNames(t *testing.T) {
 	expectedNames := []string{
 		"node_modules", "vendor", "target", "build", "dist",
 		"__pycache__", "env", "venv",
+		// Asset directories
+		"assets", "static", "images", "media", "uploads",
 	}
 	
 	for _, name := range expectedNames {
@@ -118,44 +120,6 @@ func TestExtensions(t *testing.T) {
 	}
 }
 
-// TestFrameworkDependencyFiles はFRAMEWORK_DEPENDENCY_FILESのテストです。
-func TestFrameworkDependencyFiles(t *testing.T) {
-	tests := []struct {
-		language string
-		files    []string
-	}{
-		{"Go", []string{"go.mod", "go.sum"}},
-		{"Javascript", []string{"package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb"}},
-		{"Python", []string{"requirements.txt", "Pipfile", "Pipfile.lock", "pyproject.toml", "poetry.lock"}},
-		{"Ruby", []string{"Gemfile", "Gemfile.lock"}},
-		{"Java", []string{"build.gradle", "settings.gradle", "pom.xml"}},
-		{"Rust", []string{"Cargo.toml", "Cargo.lock"}},
-	}
-	
-	for _, tt := range tests {
-		files, exists := FRAMEWORK_DEPENDENCY_FILES[tt.language]
-		if !exists {
-			t.Errorf("FRAMEWORK_DEPENDENCY_FILES should contain language %q", tt.language)
-			continue
-		}
-		
-		if len(files) != len(tt.files) {
-			t.Errorf("Language %q should have %d dependency files, got %d", tt.language, len(tt.files), len(files))
-			continue
-		}
-		
-		fileMap := make(map[string]bool)
-		for _, file := range files {
-			fileMap[file] = true
-		}
-		
-		for _, expectedFile := range tt.files {
-			if !fileMap[expectedFile] {
-				t.Errorf("Language %q should have dependency file %q", tt.language, expectedFile)
-			}
-		}
-	}
-}
 
 // TestExcludeTestKeywords はEXCLUDE_TEST_KEYWORDSのテストです。
 func TestExcludeTestKeywords(t *testing.T) {

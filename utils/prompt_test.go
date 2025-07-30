@@ -65,12 +65,11 @@ func TestGetPrompt_PredefinedTemplate(t *testing.T) {
 	}
 }
 
-func TestGetPrompt_FromFile(t *testing.T) {
-	// Create a temporary file with prompt content
+func TestGetPrompt_UnknownTemplateReturnsError(t *testing.T) {
+	// Test that file paths return error since only predefined templates are allowed
 	tempDir := t.TempDir()
 	promptFile := filepath.Join(tempDir, "test-prompt.txt")
 	
-	// Test reading from file path - should return error as it's not a predefined template
 	_, err := GetPrompt(promptFile, false)
 	if err == nil {
 		t.Errorf("GetPrompt() should return error for file paths, got no error")
@@ -153,7 +152,7 @@ func TestFormatWithPrompt(t *testing.T) {
 }
 
 func TestPromptTemplatesExist(t *testing.T) {
-	// Verify that all expected prompt templates exist and have content
+	// Verify that all expected English prompt templates exist and have content
 	expectedTemplates := []string{
 		"explain", "find-bugs", "refactor", "security", "optimize",
 		"test", "document", "migrate", "scale", "maintain",
@@ -161,20 +160,87 @@ func TestPromptTemplatesExist(t *testing.T) {
 	}
 	
 	for _, template := range expectedTemplates {
-		t.Run("Template_"+template, func(t *testing.T) {
-			content, exists := PromptTemplates[template]
+		t.Run("EnglishTemplate_"+template, func(t *testing.T) {
+			content, exists := PromptTemplatesEN[template]
 			if !exists {
-				t.Errorf("Template '%s' does not exist", template)
+				t.Errorf("English template '%s' does not exist", template)
 				return
 			}
 			
 			if strings.TrimSpace(content) == "" {
-				t.Errorf("Template '%s' has empty content", template)
+				t.Errorf("English template '%s' has empty content", template)
 			}
 			
 			// Basic content validation - should contain some structure
 			if !strings.Contains(content, "**") {
-				t.Errorf("Template '%s' does not appear to have proper formatting", template)
+				t.Errorf("English template '%s' does not appear to have proper formatting", template)
+			}
+		})
+	}
+}
+
+func TestGetPrompt_Japanese(t *testing.T) {
+	defer resetI18nPrompt() // Ensure i18n is reset after the test
+
+	SetLanguage("ja", false)
+	
+	prompt, err := GetPrompt("explain", false)
+	if err != nil {
+		t.Fatalf("GetPrompt() returned an unexpected error: %v", err)
+	}
+
+	if !strings.Contains(prompt, "プロジェクトの目的と主要機能") {
+		t.Errorf("Expected Japanese 'explain' prompt, but got: %s", prompt)
+	}
+	
+	// Test another template
+	prompt, err = GetPrompt("find-bugs", false)
+	if err != nil {
+		t.Fatalf("GetPrompt() returned an unexpected error for find-bugs: %v", err)
+	}
+	
+	if !strings.Contains(prompt, "バグ") && !strings.Contains(prompt, "問題") {
+		t.Errorf("Expected Japanese 'find-bugs' prompt with Japanese content, but got: %s", prompt)
+	}
+}
+
+// resetI18nPrompt helper function for testing prompts
+func resetI18nPrompt() {
+	SetLanguage("en", false) // Reset to English
+}
+
+func TestPromptTemplatesExistJapanese(t *testing.T) {
+	// Verify that Japanese templates exist and have content
+	expectedTemplates := []string{
+		"explain", "find-bugs", "refactor", "security", "optimize",
+		"test", "document", "migrate", "scale", "maintain",
+		"api-design", "patterns", "review", "architecture", "deploy",
+	}
+	
+	for _, template := range expectedTemplates {
+		t.Run("JapaneseTemplate_"+template, func(t *testing.T) {
+			content, exists := PromptTemplatesJA[template]
+			if !exists {
+				t.Errorf("Japanese template '%s' does not exist", template)
+				return
+			}
+			
+			if strings.TrimSpace(content) == "" {
+				t.Errorf("Japanese template '%s' has empty content", template)
+			}
+			
+			// Basic content validation - should contain some Japanese characters
+			hasJapanese := false
+			for _, r := range content {
+				if (r >= '\u3040' && r <= '\u309F') || // Hiragana
+					(r >= '\u30A0' && r <= '\u30FF') || // Katakana
+					(r >= '\u4E00' && r <= '\u9FAF') {   // Kanji
+					hasJapanese = true
+					break
+				}
+			}
+			if !hasJapanese {
+				t.Errorf("Japanese template '%s' does not appear to contain Japanese characters", template)
 			}
 		})
 	}
@@ -182,9 +248,27 @@ func TestPromptTemplatesExist(t *testing.T) {
 
 func TestPromptTemplateCount(t *testing.T) {
 	expectedCount := 15
-	actualCount := len(PromptTemplates)
+	actualCountEN := len(PromptTemplatesEN)
+	actualCountJA := len(PromptTemplatesJA)
 	
-	if actualCount != expectedCount {
-		t.Errorf("Expected %d prompt templates, got %d", expectedCount, actualCount)
+	if actualCountEN != expectedCount {
+		t.Errorf("Expected %d English prompt templates, got %d", expectedCount, actualCountEN)
+	}
+	
+	if actualCountJA != expectedCount {
+		t.Errorf("Expected %d Japanese prompt templates, got %d", expectedCount, actualCountJA)
+	}
+	
+	// Verify both template maps have the same keys
+	for key := range PromptTemplatesEN {
+		if _, exists := PromptTemplatesJA[key]; !exists {
+			t.Errorf("Japanese templates is missing key '%s' that exists in English templates", key)
+		}
+	}
+	
+	for key := range PromptTemplatesJA {
+		if _, exists := PromptTemplatesEN[key]; !exists {
+			t.Errorf("English templates is missing key '%s' that exists in Japanese templates", key)
+		}
 	}
 }

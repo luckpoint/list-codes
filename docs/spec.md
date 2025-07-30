@@ -1,6 +1,6 @@
 # list-codes Specification
 
-_Last updated: 2025-07-20_
+_Last updated: 2025-07-30_
 
 This document describes how `list-codes` determines what to include in the generated documentation/output and details the current implementation behavior.
 
@@ -15,7 +15,7 @@ This document describes how `list-codes` determines what to include in the gener
 
 The collection stage runs in two main passes:
 
-1. `collectDependencyFiles` – Reads dependency / configuration files defined in `utils.FRAMEWORK_DEPENDENCY_FILES` that relate to the detected languages (only in debug mode).
+1. `collectDependencyFiles` – No longer collects dependency files (FRAMEWORK_DEPENDENCY_FILES has been removed).
 2. `collectSourceFiles` – Reads actual source code files from all recognized languages.
 
 ### 2.1 Current Implementation
@@ -35,7 +35,7 @@ The collection stage runs in two main passes:
 ### 3.1 Default Exclusions
 * Directories/files in `utils.DefaultExcludeNames` (e.g., `node_modules`, `vendor`, `target`, `build`, `dist`, `__pycache__`)
 * Dotfiles and dot-directories (`.git`, `.vscode`, `.idea`, etc.) - can be overridden with `--include`
-* Files matching `.gitignore` patterns
+* Files matching `.gitignore` patterns (**Implemented** - See section 3.4)
 
 ### 3.2 CLI-based Exclusions
 * Paths explicitly provided via `--exclude` option (highest priority)
@@ -46,6 +46,14 @@ Test files are automatically excluded unless `--include-tests` is specified. Det
 * **Directory patterns**: `/test/`, `/tests/`, `/__tests__/`, `/spec/`, `/specs/`, `/e2e/`, `/integration/`, `/unit/`
 * **Filename keywords**: `test`, `spec`, `e2e`, `benchmark`, `bench`, `mock`, `fixture`
 * **Specific patterns**: `_test.go`, `.test.js`, `.spec.ts`, `Test.java`, etc. (see `utils.EXCLUDE_TEST_PATTERNS`)
+
+### 3.4 .gitignore Support (**Implemented**)
+The tool automatically respects `.gitignore` files found in the project directory tree:
+* **Hierarchical processing**: Nested `.gitignore` files are processed with proper precedence (closer rules override parent rules)
+* **Full pattern support**: Supports all Git ignore patterns including wildcards (`*.log`), directory patterns (`/build/`), and negation (`!important.log`)
+* **User override**: The `--include` flag overrides `.gitignore` rules for explicitly whitelisted paths
+* **Disable option**: Use `--no-gitignore` to completely disable `.gitignore` processing for legacy behavior
+* **Implementation**: Uses the `github.com/sabhiram/go-gitignore` library for Git-compatible pattern matching
 
 ## 4. Size Management
 
@@ -97,18 +105,20 @@ The generated Markdown output follows a structured format with sections in this 
 The filtering system follows a clear priority hierarchy:
 
 1. **Explicit exclusions** (`--exclude`) - Highest priority, always excludes
-2. **Include whitelist** (`--include`) - Overrides default dotfile exclusion
-3. **Default exclusions** - Dotfiles, build directories, test files
-4. **Include-only mode** - When `--include` is used, non-whitelisted items are excluded
+2. **Include whitelist** (`--include`) - Overrides default dotfile exclusion and .gitignore rules
+3. **.gitignore patterns** - Files/directories matching .gitignore rules are excluded (unless disabled with `--no-gitignore`)
+4. **Default exclusions** - Dotfiles, build directories, test files
+5. **Include-only mode** - When `--include` is used, non-whitelisted items are excluded
 
 ## 7. Processing Flow
 
 1. **Initialize configuration** - Parse CLI flags, set size limits
-2. **Language detection** - Scan for signatures, count extensions
-3. **Directory structure** - Generate tree visualization
-4. **Dependency collection** - Collect config files (debug mode)
-5. **Source collection** - Collect source files with size tracking
-6. **Output generation** - Build structured Markdown output
+2. **Load .gitignore rules** - Parse .gitignore files in project hierarchy (unless `--no-gitignore` is set)
+3. **Language detection** - Scan for signatures, count extensions
+4. **Directory structure** - Generate tree visualization
+5. **Dependency collection** - Collect config files (debug mode)
+6. **Source collection** - Collect source files with size tracking
+7. **Output generation** - Build structured Markdown output
 
 ---
 

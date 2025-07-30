@@ -54,14 +54,34 @@ func IsTestFile(filePath string, debug bool) bool {
 	return false
 }
 
+// IsAssetFile determines if the specified file path is an asset file that should be excluded.
+// Asset files include images, fonts, media files, archives, and other binary files
+// that are not useful for source code analysis.
+func IsAssetFile(filePath string, debug bool) bool {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	if ext == "" {
+		return false
+	}
+
+	if _, isAsset := ASSET_EXTENSIONS[ext]; isAsset {
+		if debug {
+			PrintDebug(fmt.Sprintf("IsAssetFile: Path '%s' identified as asset file (extension: %s)", filePath, ext), true)
+		}
+		return true
+	}
+
+	return false
+}
+
 // shouldSkipDir determines whether to skip directories or files based on a set of rules.
-// The logic prioritizes user intent:
+// The logic prioritizes user intent with additive include behavior:
 // 1. User-defined exclusions (--exclude) always result in a skip.
-// 2. If --include is used, an item is kept if it's explicitly included or is a parent of an included item.
-//    This rule overrides the default dotfile exclusion.
-// 3. If not explicitly included, any item starting with a '.' is skipped by default.
-// 4. If --include is used and an item is not on the include list (or a parent), it is skipped.
-func shouldSkipDir(fullPath, name string, isDir bool, includePaths, excludeNames, excludePaths map[string]struct{}) bool {
+// 2. If --include is used, items matching include patterns override default exclusions.
+//    This rule overrides the default dotfile exclusion and .gitignore rules.
+// 3. .gitignore matcher (if provided) - files/dirs matching .gitignore patterns are skipped.
+// 4. Any item starting with a '.' is skipped by default (unless explicitly included).
+// 5. Normal source file inclusion continues (no include-only mode).
+func shouldSkipDir(fullPath, name string, isDir bool, includePaths, excludeNames, excludePaths map[string]struct{}, gi *GitIgnoreMatcher) bool {
 	absPath, err := filepath.Abs(fullPath)
 	if err != nil {
 		PrintWarning(fmt.Sprintf("Could not get absolute path for %s: %v", fullPath, err), true)
@@ -76,35 +96,36 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths, excludeNames
 		return true
 	}
 
-	// Priority 2: Whitelisting logic for --include.
+	// Priority 2: Include additions override default exclusions.
 	// If an item is explicitly included or is a parent of an included item,
-	// it should NOT be skipped, even if it's a dotfile.
+	// it should NOT be skipped, even if it's a dotfile or matches .gitignore.
 	if len(includePaths) > 0 {
-		isNeededForInclude := false
+		isExplicitlyIncluded := false
 		for incPath := range includePaths {
-			// A path is needed if it's the included path itself, or a parent of it.
+			// A path is included if it's the included path itself, or a parent of it.
 			// e.g., include "a/b", current is "a" -> strings.HasPrefix("a/b", "a") -> true
 			// e.g., include "a/b", current is "a/b" -> strings.HasPrefix("a/b", "a/b") -> true
 			if strings.HasPrefix(incPath, absPath) || strings.HasPrefix(absPath, incPath) {
-				isNeededForInclude = true
+				isExplicitlyIncluded = true
 				break
 			}
 		}
 
-		if isNeededForInclude {
+		if isExplicitlyIncluded {
 			return false
 		}
+		// Continue with normal default logic (don't skip unless other rules apply)
 	}
 
-	// Priority 3: Default exclusion for dotfiles and dot-directories.
-	// This runs if the item was not whitelisted by the --include logic above.
-	if strings.HasPrefix(name, ".") && name != "." && name != ".." {
+	// Priority 3: .gitignore matcher - skip files/directories matching .gitignore patterns.
+	if gi != nil && gi.Match(absPath) {
 		return true
 	}
 
-	// Priority 4: If --include is active, skip anything not covered by the whitelist.
-	if len(includePaths) > 0 {
-		return true // Not needed for the include list, so skip.
+	// Priority 4: Default exclusion for dotfiles and dot-directories.
+	// This runs if the item was not whitelisted by the --include logic above.
+	if strings.HasPrefix(name, ".") && name != "." && name != ".." {
+		return true
 	}
 
 	// If no rules caused a skip, process the item.
@@ -112,7 +133,7 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths, excludeNames
 }
 
 // GenerateDirectoryStructure generates the project directory structure in Markdown format.
-func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, includePaths, excludeNames, excludePaths map[string]struct{}, includeTests bool) string {
+func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, includePaths, excludeNames, excludePaths map[string]struct{}, includeTests bool, gi *GitIgnoreMatcher) string {
 	PrintDebug("Generating directory structure...", debugMode)
 	var structureLines []string
 	structureLines = append(structureLines, "## Project Structure", "```text")
@@ -140,59 +161,76 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 		var filteredEntries []os.DirEntry
 		for _, entry := range entries {
 			itemPath := filepath.Join(currentPath, entry.Name())
-			if shouldSkipDir(itemPath, entry.Name(), entry.IsDir(), includePaths, excludeNames, excludePaths) {
+			if shouldSkipDir(itemPath, entry.Name(), entry.IsDir(), includePaths, excludeNames, excludePaths, gi) {
 				continue
 			}
 			// Skip test files from directory structure
 			if !entry.IsDir() && !includeTests && IsTestFile(itemPath, debugMode) {
 				continue
 			}
+			// Skip asset files from directory structure unless explicitly included
+			if !entry.IsDir() && IsAssetFile(itemPath, debugMode) {
+				// Check if this file is explicitly included
+				absItemPath, _ := filepath.Abs(itemPath)
+				isExplicitlyIncluded := false
+				if len(includePaths) > 0 {
+					for incPath := range includePaths {
+						if strings.HasPrefix(absItemPath, incPath) || strings.HasPrefix(incPath, absItemPath) {
+							isExplicitlyIncluded = true
+							break
+						}
+					}
+				}
+				if !isExplicitlyIncluded {
+					continue
+				}
+			}
 			filteredEntries = append(filteredEntries, entry)
 		}
 
-		for i, entry := range filteredEntries {
+		// Separate files and directories, and handle maxDepth logic
+		var filesToShow []os.DirEntry
+		var dirsToShow []os.DirEntry
+		var hasHiddenDirs bool
+
+		for _, entry := range filteredEntries {
+			if entry.IsDir() {
+				if maxDepth > 0 && depth < maxDepth {
+					dirsToShow = append(dirsToShow, entry)
+				} else {
+					hasHiddenDirs = true
+				}
+			} else {
+				filesToShow = append(filesToShow, entry)
+			}
+		}
+
+		// Combine files and visible directories
+		entriesToShow := append(filesToShow, dirsToShow...)
+		
+		// Add ellipsis if there are hidden directories
+		showEllipsis := hasHiddenDirs
+
+		for i, entry := range entriesToShow {
 			pointer := "├── "
-			if i == len(filteredEntries)-1 {
+			if i == len(entriesToShow)-1 && !showEllipsis {
 				pointer = "└── "
 			}
 
 			structureLines = append(structureLines, prefix+pointer+entry.Name())
 
 			if entry.IsDir() {
-				if maxDepth == 0 || depth < maxDepth-1 {
-					extension := "│   "
-					if pointer == "└── " {
-						extension = "    "
-					}
-					generateTreeRecursive(filepath.Join(currentPath, entry.Name()), prefix+extension, depth+1)
-				} else if depth == maxDepth-1 {
-					// Check for subdirectories to print the ellipsis
-					nextPath := filepath.Join(currentPath, entry.Name())
-					subEntries, err := os.ReadDir(nextPath)
-					if err == nil {
-						hasVisibleSubItems := false
-						for _, subEntry := range subEntries {
-							subItemPath := filepath.Join(nextPath, subEntry.Name())
-							if shouldSkipDir(subItemPath, subEntry.Name(), subEntry.IsDir(), includePaths, excludeNames, excludePaths) {
-								continue
-							}
-							// Skip test files from directory structure
-							if !subEntry.IsDir() && !includeTests && IsTestFile(subItemPath, debugMode) {
-								continue
-							}
-							hasVisibleSubItems = true
-							break
-						}
-						if hasVisibleSubItems {
-							extension := "│   "
-							if pointer == "└── " {
-								extension = "    "
-							}
-							structureLines = append(structureLines, prefix+extension+"└── ...")
-						}
-					}
+				extension := "│   "
+				if pointer == "└── " && !showEllipsis {
+					extension = "    "
 				}
+				generateTreeRecursive(filepath.Join(currentPath, entry.Name()), prefix+extension, depth+1)
 			}
+		}
+
+		// Add ellipsis at the end if there are hidden directories
+		if showEllipsis {
+			structureLines = append(structureLines, prefix+"└── ...")
 		}
 	}
 
@@ -203,7 +241,7 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 }
 
 // CollectReadmeFiles collects README.md files in the project and returns their content in Markdown format.
-func CollectReadmeFiles(folderAbs string, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool) string {
+func CollectReadmeFiles(folderAbs string, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, gi *GitIgnoreMatcher) string {
 	PrintDebug("Searching for README.md files...", debug)
 	var readmeFiles []string
 
@@ -214,14 +252,14 @@ func CollectReadmeFiles(folderAbs string, includePaths, excludeNames, excludePat
 		}
 
 		if d.IsDir() {
-			if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths) {
+			if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths, gi) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
 		if strings.ToLower(d.Name()) == "readme.md" {
-			if shouldSkipDir(path, d.Name(), false, includePaths, excludeNames, excludePaths) {
+			if shouldSkipDir(path, d.Name(), false, includePaths, excludeNames, excludePaths, gi) {
 				return nil
 			}
 
@@ -250,81 +288,15 @@ func CollectReadmeFiles(folderAbs string, includePaths, excludeNames, excludePat
 }
 
 // collectDependencyFiles collects dependency files.
-func collectDependencyFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool) (map[string][]string, map[string]struct{}) {
+func collectDependencyFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, gi *GitIgnoreMatcher) (map[string][]string, map[string]struct{}) {
 	depFileContents := make(map[string][]string)
 	processedDepFiles := make(map[string]struct{})
-
-	if !debug {
-		return depFileContents, processedDepFiles
-	}
-
-	PrintDebug("Collecting dependency and configuration files...", debug)
-	effectiveLangsForDeps := make([]string, 0) // Initialize as empty slice
-	if primaryLangs != nil {
-		effectiveLangsForDeps = primaryLangs // Assign if not nil
-	}
-
-	// If no primary languages were detected, use fallback languages for dependency file collection
-	if len(effectiveLangsForDeps) == 0 {
-		for lang := range fallbackLangs {
-			effectiveLangsForDeps = append(effectiveLangsForDeps, lang)
-		}
-		sort.Strings(effectiveLangsForDeps)
-	}
-
-	for _, langKey := range effectiveLangsForDeps {
-		if depFiles, ok := FRAMEWORK_DEPENDENCY_FILES[langKey]; ok {
-			for _, depFilePattern := range depFiles {
-				filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
-					if err != nil {
-						PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, err), debug)
-						return nil
-					}
-					if d.IsDir() {
-						if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths) {
-							return filepath.SkipDir
-						}
-						return nil
-					}
-
-					if d.Name() == depFilePattern {
-						absPath, _ := filepath.Abs(path)
-						if _, ok := processedDepFiles[absPath]; ok {
-							return nil
-						}
-						processedDepFiles[absPath] = struct{}{}
-
-						content, err := os.ReadFile(path)
-						if err != nil {
-							PrintWarning(fmt.Sprintf("Could not read dependency file '%s': %v", path, err), debug)
-							return nil
-						}
-						fileDisplayName, relErr := filepath.Rel(folderAbs, path)
-						if relErr != nil {
-							PrintWarning(fmt.Sprintf("Could not get relative path for %s: %v", path, relErr), debug)
-							fileDisplayName = path
-						}
-						fileDisplayName = filepath.ToSlash(fileDisplayName)
-						lang := GetLanguageByExtension(d.Name())
-						if lang == "" {
-							lang = strings.ToLower(d.Name())
-						}
-						codeBlockLangHint := strings.ToLower(lang)
-						codeBlockLangHint = strings.ReplaceAll(codeBlockLangHint, "/", "")
-						codeBlockLangHint = strings.ReplaceAll(codeBlockLangHint, "+", "p")
-						markdownContent := fmt.Sprintf("### %s\n\n```%s\n%s\n```\n", fileDisplayName, codeBlockLangHint, string(content))
-						depFileContents[DependencyFilesCategory] = append(depFileContents[DependencyFilesCategory], markdownContent)
-					}
-					return nil
-				})
-			}
-		}
-	}
+	// FRAMEWORK_DEPENDENCY_FILES has been removed, so this function no longer collects dependency files
 	return depFileContents, processedDepFiles
 }
 
 // collectSourceFiles collects source code files.
-func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool) (map[string][]string, int64, []string, bool) {
+func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool, gi *GitIgnoreMatcher) (map[string][]string, int64, []string, bool) {
 	sourceFileContents := make(map[string][]string)
 	var totalFileSize int64
 	var skippedFileMessages []string
@@ -338,13 +310,13 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		}
 
 		if d.IsDir() {
-			if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths) {
+			if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths, gi) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		if shouldSkipDir(path, d.Name(), false, includePaths, excludeNames, excludePaths) {
+		if shouldSkipDir(path, d.Name(), false, includePaths, excludeNames, excludePaths, gi) {
 			return nil
 		}
 
@@ -355,9 +327,29 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		if !includeTests && IsTestFile(path, debug) {
 			return nil
 		}
-
 		language := GetLanguageByExtension(d.Name())
-		if language == "" {
+		
+		// Skip asset files unless explicitly included
+		if IsAssetFile(path, debug) {
+			// Check if this file is explicitly included
+			absPath, _ := filepath.Abs(path)
+			isExplicitlyIncluded := false
+			if len(includePaths) > 0 {
+				for incPath := range includePaths {
+					if strings.HasPrefix(absPath, incPath) || strings.HasPrefix(incPath, absPath) {
+						isExplicitlyIncluded = true
+						break
+					}
+				}
+			}
+			if !isExplicitlyIncluded {
+				return nil
+			}
+			// For explicitly included asset files, treat them as plain text
+			if language == "" {
+				language = "text"
+			}
+		} else if language == "" {
 			return nil
 		}
 
