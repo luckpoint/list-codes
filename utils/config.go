@@ -19,6 +19,12 @@ var DefaultExcludeNames = map[string]struct{}{
 	"__pycache__":  {},
 	"env":          {},
 	"venv":         {},
+	// Asset directories
+	"assets":   {},
+	"static":   {},
+	"images":   {},
+	"media":    {},
+	"uploads":  {},
 }
 
 // PROJECT_SIGNATURES contains signature files/directories for detecting project languages/frameworks.
@@ -140,35 +146,6 @@ var EXTENSIONS = map[string][]string{
 	"Assembly":   {".asm", ".s"},
 }
 
-// FRAMEWORK_DEPENDENCY_FILES contains framework-specific dependency files.
-var FRAMEWORK_DEPENDENCY_FILES = map[string][]string{
-	"Ruby":       {"Gemfile", "Gemfile.lock"},
-	"Javascript": {"package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb"},
-	"Typescript": {"package.json", "package-lock.json", "tsconfig.json"},
-	"Python":     {"requirements.txt", "Pipfile", "Pipfile.lock", "pyproject.toml", "poetry.lock"},
-	"Java":       {"build.gradle", "settings.gradle", "pom.xml"},
-	"PHP":        {"composer.json", "composer.lock"},
-	"C#":         {".csproj", ".sln", "project.json", "packages.config"},
-	"F#":         {".fsproj"},
-	"VB.NET":     {".vbproj"},
-	"Scala":      {"build.sbt"},
-	"Clojure":    {"project.clj", "deps.edn"},
-	"Haskell":    {".cabal", "stack.yaml"},
-	"Erlang":     {"rebar.config"},
-	"Elixir":     {"mix.exs", "mix.lock"},
-	"Dart":       {"pubspec.yaml", "pubspec.lock"},
-	"R":          {"DESCRIPTION"},
-	"Julia":      {"Project.toml", "Manifest.toml"},
-	"Swift":      {"Package.swift"},
-	"Kotlin":     {"build.gradle.kts"},
-	"Groovy":     {"build.gradle"},
-	"CMake":      {"CMakeLists.txt"},
-	"Terraform":  {"main.tf", "variables.tf", "outputs.tf"},
-	"Protobuf/Buf": {"buf.yaml"},
-	"Go":         {"go.mod", "go.sum"},
-	"Rust":       {"Cargo.toml", "Cargo.lock"},
-	"Solidity":   {"hardhat.config.js", "hardhat.config.ts", "truffle-config.js", "foundry.toml"},
-}
 
 // EXCLUDE_TEST_KEYWORDS contains keywords for identifying test files.
 // The IsTestFile function performs a case-insensitive check against the base filename.
@@ -243,4 +220,59 @@ var EXCLUDE_TEST_PATTERNS = []string{
 	".t.sol",      // Solidity (Foundry)
 	".test.sol",   // Solidity (alternative)
 	".spec.sol",   // Solidity (alternative)
+}
+
+// ASSET_EXTENSIONS contains file extensions for asset files that should be excluded by default.
+// These files are typically not useful for source code analysis.
+var ASSET_EXTENSIONS = map[string]struct{}{
+	// Images - Raster
+	".png":  {},
+	".jpg":  {},
+	".jpeg": {},
+	".gif":  {},
+	".bmp":  {},
+	".ico":  {},
+	".tiff": {},
+	".webp": {},
+	".avif": {},
+	".heic": {},
+	// Images - Vector
+	".svg": {},
+	// Fonts
+	".woff":  {},
+	".woff2": {},
+	".ttf":   {},
+	".otf":   {},
+	".eot":   {},
+	// Audio
+	".mp3":  {},
+	".wav":  {},
+	".ogg":  {},
+	".aac":  {},
+	".flac": {},
+	".m4a":  {},
+	// Video
+	".mp4":  {},
+	".avi":  {},
+	".mov":  {},
+	".webm": {},
+	".mkv":  {},
+	".wmv":  {},
+	// Archives
+	".zip": {},
+	".tar": {},
+	".gz":  {},
+	".rar": {},
+	".7z":  {},
+	".bz2": {},
+	// Documents
+	".pdf":  {},
+	".docx": {},
+	".xlsx": {},
+	".pptx": {},
+	// Executables
+	".exe": {},
+	".dmg": {},
+	".deb": {},
+	".rpm": {},
 }

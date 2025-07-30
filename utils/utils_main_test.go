@@ -83,3 +83,42 @@ func TestSaveToMarkdown(t *testing.T) {
 		})
 	}
 }
+
+func TestSaveToMarkdownErrorPath(t *testing.T) {
+	// Test error path when trying to write to a read-only directory
+	t.Run("Write to read-only directory", func(t *testing.T) {
+		// Create a temporary directory and make it read-only
+		tempDir := t.TempDir()
+		readOnlyDir := filepath.Join(tempDir, "readonly")
+		err := os.Mkdir(readOnlyDir, 0555) // Read and execute only, no write
+		if err != nil {
+			t.Fatalf("Failed to create read-only directory: %v", err)
+		}
+		
+		// Try to write to a file in the read-only directory
+		testFile := filepath.Join(readOnlyDir, "test.md")
+		content := "# Test Content"
+		
+		err = SaveToMarkdown(content, testFile)
+		if err == nil {
+			t.Errorf("Expected SaveToMarkdown to return an error when writing to read-only directory, but it did not")
+		}
+		
+		// Verify the file was not created
+		if _, statErr := os.Stat(testFile); statErr == nil {
+			t.Errorf("Expected file not to be created in read-only directory, but it was")
+		}
+	})
+	
+	t.Run("Write to invalid path", func(t *testing.T) {
+		// Try to write to a path that contains non-existent parent directories
+		// Use a path that's very unlikely to exist and can't be created
+		invalidPath := "/this/path/absolutely/does/not/exist/and/cannot/be/created/test.md"
+		content := "# Test Content"
+		
+		err := SaveToMarkdown(content, invalidPath)
+		if err == nil {
+			t.Errorf("Expected SaveToMarkdown to return an error for invalid path, but it did not")
+		}
+	})
+}

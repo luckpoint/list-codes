@@ -29,7 +29,7 @@ func GetLanguageByExtension(fileNameOrExtension string) string {
 }
 
 // DetectProjectLanguages detects the programming languages used in the project.
-func DetectProjectLanguages(folderPath string, debugMode bool, includePaths, excludeNames, excludePaths map[string]struct{}) ([]string, map[string]int) {
+func DetectProjectLanguages(folderPath string, debugMode bool, includePaths, excludeNames, excludePaths map[string]struct{}, gi *GitIgnoreMatcher) ([]string, map[string]int) {
 	detectedLanguages := make(map[string]struct{})
 	signatureMap := make(map[string]string)
 	for lang, sigs := range PROJECT_SIGNATURES {
@@ -50,7 +50,7 @@ func DetectProjectLanguages(folderPath string, debugMode bool, includePaths, exc
 			return nil
 		}
 
-		if d.IsDir() && shouldSkipDir(absPath, d.Name(), true, includePaths, excludeNames, excludePaths) {
+		if d.IsDir() && shouldSkipDir(absPath, d.Name(), true, includePaths, excludeNames, excludePaths, gi) {
 			return filepath.SkipDir
 		}
 
@@ -93,14 +93,14 @@ func DetectProjectLanguages(folderPath string, debugMode bool, includePaths, exc
 		}
 
 		if d.IsDir() {
-			if shouldSkipDir(absPath, d.Name(), true, includePaths, excludeNames, excludePaths) {
+			if shouldSkipDir(absPath, d.Name(), true, includePaths, excludeNames, excludePaths, gi) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
 		if !d.IsDir() {
-			if shouldSkipDir(absPath, d.Name(), false, includePaths, excludeNames, excludePaths) {
+			if shouldSkipDir(absPath, d.Name(), false, includePaths, excludeNames, excludePaths, gi) {
 				return nil
 			}
 			lang := GetLanguageByExtension(d.Name())

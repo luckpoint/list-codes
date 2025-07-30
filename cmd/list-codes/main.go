@@ -25,6 +25,7 @@ var (
 	includeTests    bool
 	maxFileSizeStr  string
 	maxTotalSizeStr string
+	noGitignore     bool
 )
 
 func init() {
@@ -56,7 +57,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&readmeOnly, "readme-only", false, "Only collect README.md files")
 	rootCmd.PersistentFlags().IntVar(&maxDepth, "max-depth", utils.MaxStructureDepthDefault, "Max depth for directory structure")
 	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
-	rootCmd.PersistentFlags().StringSliceVarP(&includes, "include", "i", []string{}, "Folder path to include (repeatable)")
+	rootCmd.PersistentFlags().StringSliceVarP(&includes, "include", "i", []string{}, "Additional folder/file paths to include beyond defaults (repeatable)")
 	rootCmd.PersistentFlags().StringSliceVarP(&excludes, "exclude", "e", []string{}, "Folder path to exclude (repeatable)")
 	rootCmd.PersistentFlags().StringVar(&maxFileSizeStr, "max-file-size", "1m", "Maximum file size to include (e.g., 1m, 500k, 2g)")
 	rootCmd.PersistentFlags().StringVar(&maxTotalSizeStr, "max-total-size", "", "Maximum total file size to collect (e.g., 10m, 1g) - empty means no limit")
@@ -64,6 +65,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&langFlag, "lang", "", "Force language (ja|en) instead of auto-detection")
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "Show version information")
 	rootCmd.PersistentFlags().BoolVar(&includeTests, "include-tests", false, "Include test files in the output")
+	rootCmd.PersistentFlags().BoolVar(&noGitignore, "no-gitignore", false, "Disable .gitignore file processing")
 
 	// Register custom completion for --prompt flag
 	rootCmd.RegisterFlagCompletionFunc("prompt", promptCompletion)
@@ -136,13 +138,27 @@ var rootCmd = &cobra.Command{
 		}
 		utils.PrintDebug("Scanning folder: "+folderAbs, debugMode)
 
+		// Create GitIgnoreMatcher if --no-gitignore is not set
+		var gitIgnoreMatcher *utils.GitIgnoreMatcher
+		if !noGitignore {
+			matcher, err := utils.NewGitIgnoreMatcher(folderAbs)
+			if err != nil {
+				utils.PrintWarning(fmt.Sprintf("Could not create gitignore matcher: %v", err), debugMode)
+			} else {
+				gitIgnoreMatcher = matcher
+				utils.PrintDebug("GitIgnore matcher created successfully", debugMode)
+			}
+		} else {
+			utils.PrintDebug("GitIgnore processing disabled via --no-gitignore flag", debugMode)
+		}
+
 		var outputMD string
 		if readmeOnly {
 			utils.PrintDebug("Mode: Collecting README.md files only.", debugMode)
-			outputMD = utils.CollectReadmeFiles(folderAbs, includePaths, excludeNames, excludePaths, debugMode)
+			outputMD = utils.CollectReadmeFiles(folderAbs, includePaths, excludeNames, excludePaths, debugMode, gitIgnoreMatcher)
 		} else {
 			utils.PrintDebug("Mode: Summarizing project.", debugMode)
-			outputMD = utils.ProcessSourceFiles(folderAbs, maxDepth, includePaths, excludeNames, excludePaths, debugMode, includeTests)
+			outputMD = utils.ProcessSourceFiles(folderAbs, maxDepth, includePaths, excludeNames, excludePaths, debugMode, includeTests, gitIgnoreMatcher)
 		}
 
 		// Apply prompt if specified

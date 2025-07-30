@@ -39,12 +39,8 @@ Available prompt templates:
   deploy        - Deployment and DevOps improvements
 
 Example usage:
-  list-codes --folder ./my-project --output summary.md --debug
-  list-codes --readme-only
-  list-codes --exclude node_modules,vendor
-  list-codes --prompt explain
-  list-codes --prompt security
-  list-codes --prompt refactor`
+  list-codes
+  list-codes | pbcopy (for Mac)`
 
 	completion := `To load completions:
 
@@ -118,12 +114,8 @@ func getJapaneseHelpMessages() (string, string, string) {
   deploy        - デプロイメントとDevOps改善
 
 使用例:
-  list-codes --folder ./my-project --output summary.md --debug
-  list-codes --readme-only
-  list-codes --exclude node_modules,vendor
-  list-codes --prompt explain
-  list-codes --prompt security
-  list-codes --prompt refactor`
+  list-codes
+  list-codes | pbcopy (for Mac)`
 
 	completion := `補完を読み込むには:
 
