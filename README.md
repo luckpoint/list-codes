@@ -4,15 +4,6 @@
 
 It streamlines tasks like code reviews, documentation generation, and bug detection by outputting the source code of an entire project or a specific directory as a single text, which can be copied and pasted into an LLM's prompt.
 
-## Key Features
-
-- **📁 Source Code Collection:** Recursively collects source code from the specified directory. It automatically respects `.gitignore` to exclude unnecessary files.
-- **🔧 Flexible Filtering:** Use `--exclude` and `--include` options to omit or target specific files and directories.
-- **📊 Smart File Size Management:** Configure file and total size limits with human-readable formats (e.g., `1m`, `500k`, `2g`) to control output size and processing time.
-- **🤖 LLM-Ready Prompts:** The `--prompt` option allows you to prepend one of over 15 predefined prompts (e.g., `explain`, `find-bugs`) to make your instructions to the LLM simple and precise.
-- **🎯 Smart Dotfile Exclusion:** Automatically excludes dotfiles and dot-directories (like `.git`, `.vscode`, `.idea`) by default, while allowing explicit inclusion when needed.
-- **🧪 Test File Control:** Automatically excludes test files by default, with option to include them when needed for comprehensive analysis.
-
 ## Installation
 
 ### Option 1: Homebrew (macOS/Linux) - Recommended
@@ -49,30 +40,6 @@ go build -o list-codes ./cmd/list-codes
 ```bash
 # Display the source code of the current directory to standard output
 list-codes
-
-# Specify a project folder
-list-codes --folder /path/to/your/project
-
-# Target only the `src` and `pkg` directories
-list-codes --include "src/**,pkg/**"
-
-# Exclude `*.test.go` files
-list-codes --exclude "**/*.test.go"
-
-# Add an 'explain' prompt and output to a file
-list-codes --prompt explain --output for_llm.txt
-
-# Control file size limits with human-readable formats
-list-codes --max-file-size 500k --max-total-size 10m
-
-# Include test files in the analysis
-list-codes --include-tests
-
-# Enable debug mode and force language
-list-codes --debug --lang en
-
-# Show version information
-list-codes --version
 ```
 
 ### LLM Integration
@@ -81,10 +48,10 @@ The output of this tool is intended to be used directly as input for an LLM.
 
 ```bash
 # Copy the entire project's source code to the clipboard and paste it into an LLM
-list-codes --folder /path/to/your/project | pbcopy
+list-codes | pbcopy
 
-# Request a code review for a specific feature
-list-codes --prompt refactor --folder ./src/feature | llm-cli
+# Request a code refactor to gemini
+list-codes --prompt refactor --folder ./src/feature | gemini
 
 # Generate a project overview
 list-codes --prompt explain --folder . > project_overview.txt
@@ -121,12 +88,6 @@ You can override the default exclusions by explicitly including specific files o
 ```bash
 # Include .github directory (normally excluded as a dotfile)
 list-codes --include ".github/**"
-
-# Include specific dotfiles
-list-codes --include ".env" --include ".dockerignore"
-
-# Include everything in .vscode directory
-list-codes --include ".vscode/**"
 ```
 
 ### Exclusion Priority
