@@ -51,17 +51,10 @@ The output of this tool is intended to be used directly as input for an LLM.
 list-codes | pbcopy
 
 # Request a code refactor to gemini using predefined template
-list-codes --prompt refactor --folder ./src/feature | gemini
-
-# Generate a project overview using predefined template
-list-codes --prompt explain > project_overview.txt
+list-codes --prompt refactor | gemini
 
 # Use custom prompt text
 list-codes --prompt "Analyze this code for security vulnerabilities and provide recommendations" --folder ./src
-
-# Use custom prompt in Japanese
-list-codes --prompt "このコードの性能問題を特定して改善案を提示してください" --folder ./src
-```
 
 ## Prompt Templates and Custom Prompts
 
