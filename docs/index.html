@@ -651,6 +651,7 @@
                 <li><a href="#about" data-scroll="about">About</a></li>
                 <li><a href="#features" data-scroll="features">Features</a></li>
                 <li><a href="#installation" data-scroll="installation">Installation</a></li>
+                <li><a href="#prompts" data-scroll="prompts">Prompts</a></li>
                 <li><a href="#examples" data-scroll="examples">Examples</a></li>
             </ul>
             <button class="theme-toggle" aria-label="Toggle theme">🌙</button>
@@ -694,12 +695,17 @@
                     <pre><code><span class="comment"># Copy the entire project's source code to the clipboard and paste it into an LLM</span>
 <span class="keyword">list-codes</span> /path/to/your/project | pbcopy
 
-<span class="comment"># Request a code review for a specific feature</span>
+<span class="comment"># Request a code review using predefined template</span>
 <span class="keyword">list-codes</span> --prompt refactor ./src/feature | llm-cli
 
-<span class="comment"># Generate a project overview</span>
+<span class="comment"># Generate a project overview using predefined template</span>
 <span class="keyword">list-codes</span> --prompt explain . > project_overview.txt
-<span class="comment"># (Then, pass the content of project_overview.txt to the LLM)</span></code></pre>
+
+<span class="comment"># Use custom prompt text</span>
+<span class="keyword">list-codes</span> --prompt <span class="string">"Analyze this code for security vulnerabilities and provide recommendations"</span> ./src
+
+<span class="comment"># Use custom prompt in Japanese</span>
+<span class="keyword">list-codes</span> --prompt <span class="string">"このコードの性能問題を特定して改善案を提示してください"</span> ./src</code></pre>
                 </div>
                 <p>
                     You can ask the LLM to perform tasks such as:
@@ -730,7 +736,7 @@
                     </div>
                     <div class="feature">
                         <h3><span class="feature-icon">🤖</span>LLM-Ready Prompts</h3>
-                        <p>The <code>--prompt</code> option allows you to prepend one of over 15 predefined prompts (e.g., <code>explain</code>, <code>find-bugs</code>) to make your instructions to the LLM simple and precise.</p>
+                        <p>The <code>--prompt</code> option allows you to prepend either predefined templates (e.g., <code>explain</code>, <code>find-bugs</code>) or your own custom prompt text to make your instructions to the LLM simple and precise.</p>
                     </div>
                     <div class="feature">
                         <h3><span class="feature-icon">🧪</span>Test File Control</h3>
@@ -815,8 +821,11 @@
 <span class="comment"># Exclude `*.test.go` files</span>
 <span class="keyword">list-codes</span> --exclude <span class="string">"**/*.test.go"</span>
 
-<span class="comment"># Add an 'explain' prompt and output to a file</span>
+<span class="comment"># Add a predefined template and output to a file</span>
 <span class="keyword">list-codes</span> --prompt explain --output for_llm.txt
+
+<span class="comment"># Use custom prompt text</span>
+<span class="keyword">list-codes</span> --prompt <span class="string">"Review this code for accessibility issues"</span> --output review.txt
 
 <span class="comment"># Control file size limits with human-readable formats</span>
 <span class="keyword">list-codes</span> --max-file-size 500k --max-total-size 10m
@@ -840,7 +849,7 @@
                     <pre><code><span class="comment"># Core options</span>
 --folder, -f      <span class="string">Folder to scan (default: current directory)</span>
 --output, -o      <span class="string">Output Markdown file path</span>
---prompt, -p      <span class="string">Prompt template name to prepend to output</span>
+--prompt, -p      <span class="string">Prompt text or template name to prepend to output</span>
 
 <span class="comment"># Filtering options</span>
 --include, -i     <span class="string">Folder path to include (repeatable)</span>
@@ -856,6 +865,83 @@
 --lang            <span class="string">Force language (ja|en) instead of auto-detection</span>
 --version, -v     <span class="string">Show version information</span>
 --help, -h        <span class="string">Show help message</span></code></pre>
+                </div>
+            </section>
+
+            <section class="section" id="prompts">
+                <h2>🎯 Prompt Templates and Custom Prompts</h2>
+                <p>
+                    The <code>--prompt</code> option allows you to prepend specialized prompts to your code output, making it easier to get targeted analysis from LLMs.
+                </p>
+
+                <h3>Predefined Templates</h3>
+                <p>
+                    <strong>list-codes</strong> includes a comprehensive set of predefined prompt templates for common analysis tasks:
+                </p>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h4>Core Analysis</h4>
+                        <ul>
+                            <li><code>explain</code> - Project overview and architecture</li>
+                            <li><code>find-bugs</code> - Bug detection and error identification</li>
+                            <li><code>refactor</code> - Code refactoring suggestions</li>
+                            <li><code>review</code> - Comprehensive code review</li>
+                        </ul>
+                    </div>
+                    <div class="feature">
+                        <h4>Security & Performance</h4>
+                        <ul>
+                            <li><code>security</code> - Security vulnerability analysis</li>
+                            <li><code>optimize</code> - Performance optimization</li>
+                            <li><code>scale</code> - Scalability analysis</li>
+                            <li><code>maintain</code> - Maintainability improvements</li>
+                        </ul>
+                    </div>
+                    <div class="feature">
+                        <h4>Development Process</h4>
+                        <ul>
+                            <li><code>test</code> - Testing strategy and test cases</li>
+                            <li><code>document</code> - Documentation improvements</li>
+                            <li><code>migrate</code> - Technology stack migration</li>
+                            <li><code>deploy</code> - Deployment and operations</li>
+                        </ul>
+                    </div>
+                    <div class="feature">
+                        <h4>Architecture & Design</h4>
+                        <ul>
+                            <li><code>patterns</code> - Design pattern applications</li>
+                            <li><code>architecture</code> - Architecture analysis</li>
+                            <li><code>api-design</code> - API design evaluation</li>
+                        </ul>
+                    </div>
+                </div>
+                <p>
+                    Templates are available in both English and Japanese, automatically selected based on your system locale or <code>--lang</code> flag.
+                </p>
+
+                <h3>Custom Prompts</h3>
+                <p>
+                    You can also provide your own custom prompt text directly for specific analysis needs:
+                </p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Custom Prompt Examples</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre><code><span class="comment"># Custom analysis prompt</span>
+<span class="keyword">list-codes</span> --prompt <span class="string">"Review this code for accessibility issues and suggest improvements"</span>
+
+<span class="comment"># Domain-specific analysis</span>
+<span class="keyword">list-codes</span> --prompt <span class="string">"Analyze this machine learning code for data preprocessing best practices"</span>
+
+<span class="comment"># Multi-language support</span>
+<span class="keyword">list-codes</span> --prompt <span class="string">"このコードのテスト戦略を評価して改善案を提示してください"</span>
+
+<span class="comment"># Specific technology focus</span>
+<span class="keyword">list-codes</span> --prompt <span class="string">"Analyze for React performance anti-patterns"</span> --folder ./components
+
+<span class="comment"># Save analysis with custom prompt to file</span>
+<span class="keyword">list-codes</span> --prompt <span class="string">"Code review focusing on error handling"</span> --output review.md</code></pre>
                 </div>
             </section>
 
