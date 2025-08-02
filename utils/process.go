@@ -89,10 +89,9 @@ func buildMarkdownOutput(directoryStructureMD string, depFileContents map[string
 // ProcessSourceFiles processes source files and generates a Markdown summary.
 func ProcessSourceFiles(folderAbs string, maxDepth int, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool, gi *GitIgnoreMatcher) string {
 	directoryStructureMD := GenerateDirectoryStructure(folderAbs, maxDepth, debug, includePaths, excludeNames, excludePaths, includeTests, gi)
-	primaryLangs, fallbackLangs := DetectProjectLanguages(folderAbs, debug, includePaths, excludeNames, excludePaths, gi)
 
-	depFileContents, processedDepFiles := collectDependencyFiles(folderAbs, primaryLangs, fallbackLangs, includePaths, excludeNames, excludePaths, debug, gi)
-	sourceFileContents, totalFileSize, skippedFileMessages, limitHit := collectSourceFiles(folderAbs, primaryLangs, fallbackLangs, processedDepFiles, includePaths, excludeNames, excludePaths, debug, includeTests, gi)
+	depFileContents, processedDepFiles := collectDependencyFiles(folderAbs, nil, nil, includePaths, excludeNames, excludePaths, debug, gi)
+	sourceFileContents, totalFileSize, skippedFileMessages, limitHit := collectSourceFiles(folderAbs, nil, nil, processedDepFiles, includePaths, excludeNames, excludePaths, debug, includeTests, gi)
 
 	return buildMarkdownOutput(directoryStructureMD, depFileContents, sourceFileContents, totalFileSize, skippedFileMessages, limitHit, debug)
 }

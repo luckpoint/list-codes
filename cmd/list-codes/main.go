@@ -61,7 +61,7 @@ func init() {
 	rootCmd.PersistentFlags().StringSliceVarP(&excludes, "exclude", "e", []string{}, "Folder path to exclude (repeatable)")
 	rootCmd.PersistentFlags().StringVar(&maxFileSizeStr, "max-file-size", "1m", "Maximum file size to include (e.g., 1m, 500k, 2g)")
 	rootCmd.PersistentFlags().StringVar(&maxTotalSizeStr, "max-total-size", "", "Maximum total file size to collect (e.g., 10m, 1g) - empty means no limit")
-	rootCmd.PersistentFlags().StringVarP(&prompt, "prompt", "p", "", "Prompt template name to prepend to output (use predefined templates only)")
+	rootCmd.PersistentFlags().StringVarP(&prompt, "prompt", "p", "", "Prompt text or template name to prepend to output (accepts both predefined templates and custom text)")
 	rootCmd.PersistentFlags().StringVar(&langFlag, "lang", "", "Force language (ja|en) instead of auto-detection")
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "Show version information")
 	rootCmd.PersistentFlags().BoolVar(&includeTests, "include-tests", false, "Include test files in the output")

@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"strings"
 )
 
 // PromptTemplatesJA contains Japanese versions of prompt templates
@@ -345,7 +344,7 @@ func GetPromptI18n(promptParam string, debugMode bool) (string, error) {
 		return "", nil
 	}
 
-	// Only accept predefined templates
+	// First check if it's a predefined template
 	var templates map[string]string
 	isJa := IsJapanese()
 	PrintDebug(fmt.Sprintf("Language check: IsJapanese=%v, currentLang=%v", isJa, GetCurrentLanguage()), debugMode)
@@ -362,12 +361,9 @@ func GetPromptI18n(promptParam string, debugMode bool) (string, error) {
 		return template, nil
 	}
 
-	// Return error if the prompt is not in predefined templates
-	availablePrompts := make([]string, 0, len(templates))
-	for key := range templates {
-		availablePrompts = append(availablePrompts, key)
-	}
-	return "", fmt.Errorf("unknown prompt template '%s'. Available templates: %s", promptParam, strings.Join(availablePrompts, ", "))
+	// If not a predefined template, use the prompt parameter as-is (custom prompt)
+	PrintDebug(fmt.Sprintf("Using custom prompt: %s", promptParam), debugMode)
+	return promptParam, nil
 }
 
 // GetAvailablePrompts returns a list of available prompt template names

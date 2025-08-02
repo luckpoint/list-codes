@@ -44,7 +44,7 @@ func TestGetPrompt_PredefinedTemplate(t *testing.T) {
 		{"Valid template - explain", "explain", false},
 		{"Valid template - find-bugs", "find-bugs", false},
 		{"Valid template - refactor", "refactor", false},
-		{"Invalid template", "nonexistent", true}, // Should return error for unknown template
+		{"Custom text as prompt", "nonexistent", false}, // Custom text should be allowed
 	}
 	
 	for _, tt := range tests {
@@ -65,24 +65,32 @@ func TestGetPrompt_PredefinedTemplate(t *testing.T) {
 	}
 }
 
-func TestGetPrompt_UnknownTemplateReturnsError(t *testing.T) {
-	// Test that file paths return error since only predefined templates are allowed
+func TestGetPrompt_CustomTextAllowed(t *testing.T) {
+	// Test that custom text is now allowed
 	tempDir := t.TempDir()
 	promptFile := filepath.Join(tempDir, "test-prompt.txt")
 	
-	_, err := GetPrompt(promptFile, false)
-	if err == nil {
-		t.Errorf("GetPrompt() should return error for file paths, got no error")
+	result, err := GetPrompt(promptFile, false)
+	if err != nil {
+		t.Errorf("GetPrompt() should allow custom text, got error: %v", err)
+	}
+	
+	if result != promptFile {
+		t.Errorf("GetPrompt() should return custom text as-is, got: %s, want: %s", result, promptFile)
 	}
 }
 
 func TestGetPrompt_FileNotFound(t *testing.T) {
 	nonExistentFile := "/path/that/does/not/exist/prompt.txt"
 	
-	// Should return error for file paths that aren't predefined templates
-	_, err := GetPrompt(nonExistentFile, false)
-	if err == nil {
-		t.Errorf("GetPrompt() should return error for file paths, got no error")
+	// Should return the file path as-is (custom text), no error
+	result, err := GetPrompt(nonExistentFile, false)
+	if err != nil {
+		t.Errorf("GetPrompt() should allow custom text, got error: %v", err)
+	}
+	
+	if result != nonExistentFile {
+		t.Errorf("GetPrompt() should return custom text as-is, got: %s, want: %s", result, nonExistentFile)
 	}
 }
 
@@ -101,10 +109,14 @@ func TestGetPrompt_EmptyPrompt(t *testing.T) {
 func TestGetPrompt_CustomText(t *testing.T) {
 	customText := "This is a custom prompt text"
 	
-	// Should return error for custom text that's not a predefined template
-	_, err := GetPrompt(customText, false)
-	if err == nil {
-		t.Errorf("GetPrompt() should return error for custom text, got no error")
+	// Should return custom text as-is (new behavior)
+	result, err := GetPrompt(customText, false)
+	if err != nil {
+		t.Errorf("GetPrompt() should allow custom text, got error: %v", err)
+	}
+	
+	if result != customText {
+		t.Errorf("GetPrompt() should return custom text as-is, got: %s, want: %s", result, customText)
 	}
 }
 
