@@ -51,17 +51,10 @@ The output of this tool is intended to be used directly as input for an LLM.
 list-codes | pbcopy
 
 # Request a code refactor to gemini using predefined template
-list-codes --prompt refactor --folder ./src/feature | gemini
-
-# Generate a project overview using predefined template
-list-codes --prompt explain > project_overview.txt
+list-codes --prompt refactor | gemini
 
 # Use custom prompt text
 list-codes --prompt "Analyze this code for security vulnerabilities and provide recommendations" --folder ./src
-
-# Use custom prompt in Japanese
-list-codes --prompt "このコードの性能問題を特定して改善案を提示してください" --folder ./src
-```
 
 ## Prompt Templates and Custom Prompts
 
@@ -88,34 +81,6 @@ The `--prompt` option allows you to prepend specialized prompts to your code out
 - `deploy` - Deployment and operations suggestions
 
 Templates are available in both English and Japanese, automatically selected based on your system locale.
-
-### Custom Prompts
-
-You can also provide your own custom prompt text directly:
-
-```bash
-# Custom analysis prompt
-list-codes --prompt "Review this code for accessibility issues and suggest improvements"
-
-# Domain-specific analysis
-list-codes --prompt "Analyze this machine learning code for data preprocessing best practices"
-
-# Multi-language support
-list-codes --prompt "このコードのテスト戦略を評価して改善案を提示してください"
-```
-
-### Usage Examples
-
-```bash
-# Use predefined template for security analysis
-list-codes --prompt security --folder ./src
-
-# Custom prompt for specific requirements
-list-codes --prompt "Analyze for React performance anti-patterns" --folder ./components
-
-# Save analysis with custom prompt to file
-list-codes --prompt "Code review focusing on error handling" --output review.md
-```
 
 ## Filtering and Exclusion Behavior
 
