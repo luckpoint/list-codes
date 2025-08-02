@@ -169,6 +169,19 @@
             z-index: 1;
         }
 
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .logo {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+        }
+
         .header h1 {
             font-size: clamp(2.5rem, 5vw, 4rem);
             font-weight: 800;
@@ -665,7 +678,10 @@
             <div class="floating-element"></div>
         </div>
         <div class="container header-content">
-            <h1>list-codes</h1>
+            <div class="header-title">
+                <img src="list-codes-logo.png" alt="list-codes logo" class="logo">
+                <h1>list-codes</h1>
+            </div>
             <p>Source Code Analysis Assistant for Large Language Models</p>
         </div>
     </header>
