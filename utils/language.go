@@ -10,6 +10,11 @@ func GetLanguageByExtension(fileNameOrExtension string) string {
 	if filepath.Base(fileNameOrExtension) == "Dockerfile" {
 		return "Dockerfile"
 	}
+	// Special-case for Laravel Blade compound extension
+	lowerName := strings.ToLower(fileNameOrExtension)
+	if strings.HasSuffix(lowerName, ".blade.php") {
+		return "HTML"
+	}
 	ext := strings.ToLower(filepath.Ext(fileNameOrExtension))
 	if ext == "" {
 		ext = strings.ToLower(fileNameOrExtension)
@@ -24,4 +29,3 @@ func GetLanguageByExtension(fileNameOrExtension string) string {
 	}
 	return ""
 }
-

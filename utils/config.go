@@ -20,11 +20,11 @@ var DefaultExcludeNames = map[string]struct{}{
 	"env":          {},
 	"venv":         {},
 	// Asset directories
-	"assets":   {},
-	"static":   {},
-	"images":   {},
-	"media":    {},
-	"uploads":  {},
+	"assets":  {},
+	"static":  {},
+	"images":  {},
+	"media":   {},
+	"uploads": {},
 }
 
 // PROJECT_SIGNATURES contains signature files/directories for detecting project languages/frameworks.
@@ -36,33 +36,51 @@ var PROJECT_SIGNATURES = map[string][]string{
 	"Python":     {"requirements.txt", "setup.py", "pyproject.toml", "Pipfile"},
 	"Rust":       {"Cargo.toml"},
 	"SQL":        {".sql"},
-	"HTML":       {".html", ".erb", ".haml", ".slim"},
-	"CSS":        {".css", ".scss", ".sass"},
-	"Lua":        {".lua"},
-	"C":          {".c"},
-	"C++":        {".cpp", ".hpp", ".cxx", ".hxx", ".cc", ".hh", ".h"},
-	"Java":       {"build.gradle", "settings.gradle", "pom.xml"},
-	"PHP":        {"composer.json"},
-	"C#":         {".csproj", ".sln", "project.json"},
-	"F#":         {".fsproj"},
-	"VB.NET":     {".vbproj"},
-	"Scala":      {"build.sbt"},
-	"Clojure":    {"project.clj", "deps.edn"},
-	"Haskell":    {".cabal", "stack.yaml"},
-	"Erlang":     {"rebar.config"},
-	"Elixir":     {"mix.exs"},
-	"Dart":       {"pubspec.yaml"},
-	"R":          {"DESCRIPTION"},
-	"Julia":      {"Project.toml"},
-	"Swift":      {"Package.swift"},
-	"Kotlin":     {"build.gradle.kts"},
-	"Groovy":     {"build.gradle"},
-	"CMake":      {"CMakeLists.txt"},
-	"Terraform":  {"main.tf"},
+	"HTML": {".html", ".htm", ".rhtml", ".erb", ".haml", ".slim",
+		// Common JS/HTML template engines
+		".hbs", ".handlebars", ".mustache", ".hjs",
+		".ejs", ".pug", ".jade",
+		".njk", ".nunjucks",
+		".twig", ".liquid",
+		".tmpl", ".tpl", ".gohtml",
+		// Django/Jinja family
+		".djhtml", ".jinja", ".jinja2", ".j2",
+		// ASP.NET Razor
+		".cshtml", ".vbhtml",
+		// JSP/Java Server Pages
+		".jsp", ".jspx",
+		// Phoenix (Elixir)
+		".eex", ".heex", ".leex",
+		// Others seen in the wild
+		".dust", ".eta", ".vash"},
+	"CSS":          {".css", ".scss", ".sass"},
+	"Lua":          {".lua"},
+	"C":            {".c"},
+	"C++":          {".cpp", ".hpp", ".cxx", ".hxx", ".cc", ".hh", ".h"},
+	"Java":         {"build.gradle", "settings.gradle", "pom.xml"},
+	"PHP":          {"composer.json"},
+	"C#":           {".csproj", ".sln", "project.json"},
+	"F#":           {".fsproj"},
+	"VB.NET":       {".vbproj"},
+	"Scala":        {"build.sbt"},
+	"Clojure":      {"project.clj", "deps.edn"},
+	"Haskell":      {".cabal", "stack.yaml"},
+	"Erlang":       {"rebar.config"},
+	"Elixir":       {"mix.exs"},
+	"Dart":         {"pubspec.yaml"},
+	"R":            {"DESCRIPTION"},
+	"Julia":        {"Project.toml"},
+	"Swift":        {"Package.swift"},
+	"Kotlin":       {"build.gradle.kts"},
+	"Groovy":       {"build.gradle"},
+	"CMake":        {"CMakeLists.txt"},
+	"Terraform":    {"main.tf"},
 	"Protobuf/Buf": {".proto", "buf.yaml"},
-	"Markdown":   {"README.md"},
-	"MDX":        {".mdx"},
-	"Solidity":   {"hardhat.config.js", "hardhat.config.ts", "truffle-config.js", "foundry.toml"},
+	"Markdown":     {"README.md"},
+	"MDX":          {".mdx"},
+	"Vue":          {".vue"},
+	"Svelte":       {".svelte"},
+	"Solidity":     {"hardhat.config.js", "hardhat.config.ts", "truffle-config.js", "foundry.toml"},
 }
 
 // EXTENSIONS maps file extensions to programming languages for detection.
@@ -76,76 +94,97 @@ var EXTENSIONS = map[string][]string{
 	"Kotlin":     {".kt", ".kts"},
 	"Rust":       {".rs"},
 	"SQL":        {".sql"},
-	"HTML":       {".html", ".htm", ".erb", ".haml", ".slim"},
-	"CSS":        {".css", ".scss", ".sass", ".less", ".styl"},
-	"Lua":        {".lua"},
-	"C":          {".c", ".h"},
-	"C++":        {".cpp", ".hpp", ".cxx", ".hxx", ".cc", ".hh", ".c++", ".h++"},
-	"Java":       {".java"},
-	"PHP":        {".php", ".phtml", ".php3", ".php4", ".php5"},
-	"C#":         {".cs", ".csx"},
-	"F#":         {".fs", ".fsi", ".fsx"},
-	"VB.NET":     {".vb"},
-	"Scala":      {".scala", ".sc"},
-	"Clojure":    {".clj", ".cljs", ".cljc"},
-	"Haskell":    {".hs", ".lhs"},
-	"Erlang":     {".erl", ".hrl"},
-	"Elixir":     {".ex", ".exs"},
-	"Dart":       {".dart"},
-	"R":          {".r", ".R"},
-	"Perl":       {".pl", ".pm", ".perl"},
-	"Objective-C": {".m", ".mm"},
-	"Pascal":     {".pas", ".pp"},
-	"Fortran":    {".f", ".f90", ".f95", ".f03", ".f08"},
-	"COBOL":      {".cob", ".cbl"},
-	"Ada":        {".ada", ".adb", ".ads"},
-	"Lisp":       {".lisp", ".lsp", ".cl"},
-	"Scheme":     {".scm", ".ss"},
-	"Prolog":     {".pl", ".pro"},
-	"MATLAB":     {".m"},
-	"Octave":     {".m"},
-	"Julia":      {".jl"},
-	"Zig":        {".zig"},
-	"D":          {".d"},
-	"Nim":        {".nim"},
-	"Crystal":    {".cr"},
-	"Groovy":     {".groovy", ".gvy"},
-	"PowerShell": {".ps1", ".psm1", ".psd1"},
-	"Bash":       {".bash"},
-	"Zsh":        {".zsh"},
-	"Fish":       {".fish"},
-	"Tcl":        {".tcl"},
-	"Vim":        {".vim"},
-	"Emacs Lisp": {".el"},
+	"HTML": {".html", ".htm", ".rhtml", ".erb", ".haml", ".slim",
+		// Common JS/HTML template engines
+		".hbs", ".handlebars", ".mustache", ".hjs",
+		".ejs", ".pug", ".jade",
+		".njk", ".nunjucks",
+		".twig", ".liquid",
+		".tmpl", ".tpl", ".gohtml",
+		// Django/Jinja family
+		".djhtml", ".jinja", ".jinja2", ".j2",
+		// ASP.NET Razor
+		".cshtml", ".vbhtml",
+		// JSP/Java Server Pages
+		".jsp", ".jspx",
+		// ASP.NET Web Forms (legacy)
+		".aspx", ".ascx", ".master",
+		// Phoenix (Elixir)
+		".eex", ".heex", ".leex",
+		// Java templating
+		".ftl", ".vm",
+		// Others seen in the wild
+		".dust", ".eta", ".vash"},
+	"CSS":          {".css", ".scss", ".sass", ".less", ".styl"},
+	"Lua":          {".lua"},
+	"C":            {".c", ".h"},
+	"C++":          {".cpp", ".hpp", ".cxx", ".hxx", ".cc", ".hh", ".c++", ".h++"},
+	"Java":         {".java"},
+	"PHP":          {".php", ".phtml", ".php3", ".php4", ".php5"},
+	"C#":           {".cs", ".csx"},
+	"F#":           {".fs", ".fsi", ".fsx"},
+	"VB.NET":       {".vb"},
+	"Scala":        {".scala", ".sc"},
+	"Clojure":      {".clj", ".cljs", ".cljc"},
+	"Haskell":      {".hs", ".lhs"},
+	"Erlang":       {".erl", ".hrl"},
+	"Elixir":       {".ex", ".exs"},
+	"Dart":         {".dart"},
+	"R":            {".r", ".R"},
+	"Perl":         {".pl", ".pm", ".perl"},
+	"Objective-C":  {".m", ".mm"},
+	"Pascal":       {".pas", ".pp"},
+	"Fortran":      {".f", ".f90", ".f95", ".f03", ".f08"},
+	"COBOL":        {".cob", ".cbl"},
+	"Ada":          {".ada", ".adb", ".ads"},
+	"Lisp":         {".lisp", ".lsp", ".cl"},
+	"Scheme":       {".scm", ".ss"},
+	"Prolog":       {".pl", ".pro"},
+	"MATLAB":       {".m"},
+	"Octave":       {".m"},
+	"Julia":        {".jl"},
+	"Zig":          {".zig"},
+	"D":            {".d"},
+	"Nim":          {".nim"},
+	"Crystal":      {".cr"},
+	"Groovy":       {".groovy", ".gvy"},
+	"PowerShell":   {".ps1", ".psm1", ".psd1"},
+	"Bash":         {".bash"},
+	"Zsh":          {".zsh"},
+	"Fish":         {".fish"},
+	"Tcl":          {".tcl"},
+	"Vim":          {".vim"},
+	"Emacs Lisp":   {".el"},
 	"Protobuf/Buf": {".proto"},
-	"Markdown":   {".md"},
-	"MDX":        {".mdx"},
-	"Solidity":   {".sol"},
-	"YAML":       {".yaml", ".yml"},
-	"JSON":       {".json"},
-	"XML":        {".xml", ".xsd", ".xsl"},
-	"Shell":      {".sh"},
-	"Dockerfile": {"Dockerfile"},
-	"TOML":       {".toml"},
-	"Gradle":     {".gradle", ".gradle.kts"},
-	"INI":        {".ini", ".cfg"},
-	"Properties": {".properties"},
-	"Makefile":   {"Makefile", "makefile", ".mk"},
-	"CMake":      {".cmake", "CMakeLists.txt"},
-	"Terraform":  {".tf", ".tfvars"},
-	"HCL":        {".hcl"},
-	"GraphQL":    {".graphql", ".gql"},
-	"Jupyter":    {".ipynb"},
-	"LaTeX":      {".tex", ".latex"},
-	"Regex":      {".regex"},
-	"Diff":       {".diff", ".patch"},
-	"Log":        {".log"},
-	"CSV":        {".csv"},
-	"TSV":        {".tsv"},
-	"WebAssembly": {".wat", ".wasm"},
-	"Assembly":   {".asm", ".s"},
+	"Markdown":     {".md"},
+	"MDX":          {".mdx"},
+	"Vue":          {".vue"},
+	"Svelte":       {".svelte"},
+	"Solidity":     {".sol"},
+	"YAML":         {".yaml", ".yml"},
+	"JSON":         {".json"},
+	"XML":          {".xml", ".xsd", ".xsl"},
+	"Shell":        {".sh"},
+	"Dockerfile":   {"Dockerfile"},
+	"TOML":         {".toml"},
+	"Gradle":       {".gradle", ".gradle.kts"},
+	"INI":          {".ini", ".cfg"},
+	"Properties":   {".properties"},
+	"Makefile":     {"Makefile", "makefile", ".mk"},
+	"CMake":        {".cmake", "CMakeLists.txt"},
+	"Terraform":    {".tf", ".tfvars"},
+	"HCL":          {".hcl"},
+	"GraphQL":      {".graphql", ".gql"},
+	"Jupyter":      {".ipynb"},
+	"LaTeX":        {".tex", ".latex"},
+	"Regex":        {".regex"},
+	"Diff":         {".diff", ".patch"},
+	"Log":          {".log"},
+	"CSV":          {".csv"},
+	"TSV":          {".tsv"},
+	"WebAssembly":  {".wat", ".wasm"},
+	"Assembly":     {".asm", ".s"},
 }
-
 
 // EXCLUDE_TEST_KEYWORDS contains keywords for identifying test files.
 // The IsTestFile function performs a case-insensitive check against the base filename.
@@ -162,22 +201,22 @@ var EXCLUDE_TEST_KEYWORDS = []string{
 // EXCLUDE_TEST_DIRS contains directory paths for identifying test files.
 // The IsTestFile function checks if the file's path contains any of these strings.
 var EXCLUDE_TEST_DIRS = []string{
-	"/test/",      // Root-level "test" folder
-	"/tests/",     // Root-level "tests" folder
-	"/spec/",      // Root-level "spec" folder
-	"/specs/",     // Root-level "specs" folder
-	"/__tests__/", // A common convention in Jest (JavaScript)
-	"/__test__/",  // Alternative Jest convention
-	"/testing/",   // Generic testing folder
-	"/fixtures/",  // Test fixtures
-	"/mocks/",     // Mock files
-	"/e2e/",       // End-to-end tests
+	"/test/",        // Root-level "test" folder
+	"/tests/",       // Root-level "tests" folder
+	"/spec/",        // Root-level "spec" folder
+	"/specs/",       // Root-level "specs" folder
+	"/__tests__/",   // A common convention in Jest (JavaScript)
+	"/__test__/",    // Alternative Jest convention
+	"/testing/",     // Generic testing folder
+	"/fixtures/",    // Test fixtures
+	"/mocks/",       // Mock files
+	"/e2e/",         // End-to-end tests
 	"/integration/", // Integration tests
-	"/unit/",      // Unit tests
-	"test/",       // "test" folder at any depth
-	"tests/",      // "tests" folder at any depth
-	"spec/",       // "spec" folder at any depth
-	"specs/",      // "specs" folder at any depth
+	"/unit/",        // Unit tests
+	"test/",         // "test" folder at any depth
+	"tests/",        // "tests" folder at any depth
+	"spec/",         // "spec" folder at any depth
+	"specs/",        // "specs" folder at any depth
 }
 
 // EXCLUDE_TEST_PATTERNS contains specific filename patterns to identify test files.
