@@ -1,8 +1,27 @@
+
 # list-codes - Source Code Analysis Assistant for LLMs
 
 **list-codes** is a command-line tool designed to collect and format source code from a specified project, making it easy to analyze with Large Language Models (LLMs).
 
 It streamlines tasks like code reviews, documentation generation, and bug detection by outputting the source code of an entire project or a specific directory as a single text, which can be copied and pasted into an LLM's prompt.
+
+https://github.com/user-attachments/assets/bcd48e17-9e37-4f77-9957-7d427b35eefd
+
+This example shows "list-codes --prompt explain | gemini"  
+list-codes gathers code and "--prompt explain" emits a prompt and then passes it to gemini.
+
+When "--prompt explain" is specified, the prompt will be as follows:
+```
+Please analyze the following codebase and explain the following aspects:
+
+1. **Project purpose and main functionality**
+2. **Architecture and design patterns**
+3. **Key components and their roles**
+4. **Technology stack and dependencies**
+5. **Code structure and organization**
+
+Please provide a clear and concise explanation that can be understood by non-technical people.
+```
 
 ## Installation
 
