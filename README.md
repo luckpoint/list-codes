@@ -5,7 +5,7 @@
 
 It streamlines tasks like code reviews, documentation generation, and bug detection by outputting the source code of an entire project or a specific directory as a single text, which can be copied and pasted into an LLM's prompt.
 
-https://github.com/user-attachments/assets/bcd48e17-9e37-4f77-9957-7d427b35eefd
+<img width="857" height="591" alt="image" src="https://github.com/user-attachments/assets/475ff692-6acb-4dd2-8103-8e97c24616f2" />
 
 This example shows "list-codes --prompt explain | gemini"  
 list-codes gathers code and "--prompt explain" emits a prompt and then passes it to gemini.
