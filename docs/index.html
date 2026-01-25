@@ -5,34 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>list-codes - Source Code Analysis Assistant for LLMs</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Lexend:wght@300;400;600;700&display=swap');
+
         :root {
-            --primary-color: #43A6C6;
-            --secondary-color: #3A506B;
-            --accent-color: #FF6B6B;
-            --bg-color: #ffffff;
-            --text-color: #333333;
-            --text-light: #6c757d;
-            --surface-color: #f7f9fc;
-            --border-color: #e9ecef;
-            --shadow-light: 0 4px 12px rgba(0,0,0,0.05);
-            --shadow-medium: 0 8px 32px rgba(0,0,0,0.1);
-            --shadow-heavy: 0 16px 48px rgba(0,0,0,0.15);
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 20px;
-            --transition-fast: 0.2s ease;
+            --primary-color: #FF6B9D;
+            --secondary-color: #4A90E2;
+            --accent-color: #FFC857;
+            --success-color: #6BCF7E;
+            --bg-color: #FFF5F7;
+            --text-color: #2D3142;
+            --text-light: #7B7D8C;
+            --surface-color: #FFFFFF;
+            --border-color: #FFE5EC;
+            --shadow-sm: 0 2px 8px rgba(255, 107, 157, 0.1);
+            --shadow-md: 0 8px 24px rgba(255, 107, 157, 0.15);
+            --shadow-lg: 0 16px 48px rgba(255, 107, 157, 0.2);
+            --shadow-toy: 0 4px 0 rgba(255, 107, 157, 0.3);
+            --radius-sm: 16px;
+            --radius-md: 24px;
+            --radius-lg: 32px;
+            --radius-pill: 999px;
+            --transition-bounce: 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         [data-theme="dark"] {
-            --bg-color: #1a1a1a;
-            --text-color: #e2e8f0;
-            --text-light: #a0a0a0;
-            --surface-color: #2d3748;
-            --border-color: #4a5568;
-            --shadow-light: 0 4px 12px rgba(0,0,0,0.3);
-            --shadow-medium: 0 8px 32px rgba(0,0,0,0.4);
-            --shadow-heavy: 0 16px 48px rgba(0,0,0,0.5);
+            --bg-color: #1A1625;
+            --text-color: #F0E6FF;
+            --text-light: #A99FBD;
+            --surface-color: #2D2438;
+            --border-color: #3F3451;
+            --shadow-sm: 0 2px 8px rgba(106, 13, 173, 0.3);
+            --shadow-md: 0 8px 24px rgba(106, 13, 173, 0.4);
+            --shadow-lg: 0 16px 48px rgba(106, 13, 173, 0.5);
+            --shadow-toy: 0 4px 0 rgba(138, 43, 226, 0.4);
         }
 
         * {
@@ -42,41 +48,60 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
+            font-family: 'Lexend', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.7;
             color: var(--text-color);
-            background-color: var(--bg-color);
+            background: var(--bg-color);
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(255, 107, 157, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(74, 144, 226, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(255, 200, 87, 0.05) 0%, transparent 50%);
             transition: background-color var(--transition-smooth), color var(--transition-smooth);
             overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,107,157,0.1)"/></svg>');
+            background-size: 30px 30px;
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
+            position: relative;
+            z-index: 1;
         }
 
         /* Navigation */
         .nav {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-150%);
+            background: var(--surface-color);
+            backdrop-filter: blur(20px) saturate(180%);
             z-index: 1000;
-            padding: 1rem 0;
-            border-bottom: 1px solid var(--border-color);
-            transition: all var(--transition-smooth);
-            transform: translateY(-100%);
-        }
-
-        [data-theme="dark"] .nav {
-            background: rgba(26, 26, 26, 0.95);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-pill);
+            border: 3px solid var(--primary-color);
+            box-shadow: var(--shadow-toy), var(--shadow-md);
+            transition: all var(--transition-bounce);
+            max-width: 90%;
         }
 
         .nav.visible {
-            transform: translateY(0);
+            transform: translateX(-50%) translateY(0);
         }
 
         .nav-container {
@@ -86,10 +111,19 @@
         }
 
         .nav-brand {
+            font-family: 'Fredoka', sans-serif;
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--primary-color);
             text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: transform var(--transition-bounce);
+        }
+
+        .nav-brand:hover {
+            transform: scale(1.05) rotate(-2deg);
         }
 
         .nav-links {
@@ -101,56 +135,64 @@
         .nav-links a {
             color: var(--text-color);
             text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius-sm);
-            transition: all var(--transition-fast);
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: var(--radius-pill);
+            transition: all var(--transition-bounce);
             position: relative;
+            font-size: 0.95rem;
         }
 
         .nav-links a:hover {
-            background: var(--surface-color);
-            transform: translateY(-2px);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: var(--shadow-toy);
         }
 
-        .nav-links a.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1rem;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 6px;
-            height: 6px;
-            background: var(--primary-color);
-            border-radius: 50%;
+        .nav-links a.active {
+            background: var(--accent-color);
+            color: var(--text-color);
+            box-shadow: var(--shadow-sm);
         }
 
         .theme-toggle {
-            background: none;
-            border: 2px solid var(--border-color);
-            padding: 0.5rem;
-            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+            border: 3px solid var(--surface-color);
+            padding: 0.6rem;
+            border-radius: 50%;
             cursor: pointer;
-            color: var(--text-color);
-            transition: all var(--transition-fast);
-            font-size: 1.2rem;
+            color: white;
+            transition: all var(--transition-bounce);
+            font-size: 1.3rem;
+            box-shadow: var(--shadow-toy);
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .theme-toggle:hover {
-            border-color: var(--primary-color);
-            transform: scale(1.1);
+            transform: scale(1.15) rotate(15deg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.95) rotate(-5deg);
         }
 
         /* Header */
         .header {
             text-align: center;
-            padding: 8rem 0 4rem;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            padding: 10rem 0 6rem;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--accent-color) 100%);
             color: white;
             border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-            box-shadow: var(--shadow-heavy);
+            box-shadow: var(--shadow-lg), inset 0 -100px 100px rgba(255, 255, 255, 0.1);
             position: relative;
             overflow: hidden;
+            border-bottom: 6px solid var(--accent-color);
         }
 
         .header::before {
@@ -160,8 +202,17 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
+            background-image:
+                radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 40%),
+                radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 40%),
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="10" cy="10" r="2" fill="rgba(255,255,255,0.3)"/><circle cx="90" cy="50" r="3" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="90" r="2.5" fill="rgba(255,255,255,0.25)"/></svg>');
+            background-size: 100% 100%, 100% 100%, 200px 200px;
+            animation: headerFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes headerFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(20px, -10px) scale(1.05); }
         }
 
         .header-content {
@@ -177,29 +228,64 @@
         }
 
         .logo {
-            width: 64px;
-            height: 64px;
+            width: 80px;
+            height: 80px;
             object-fit: contain;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-10px) rotate(5deg);
+            }
         }
 
         .header h1 {
-            font-size: clamp(2.5rem, 5vw, 4rem);
-            font-weight: 800;
+            font-family: 'Fredoka', sans-serif;
+            font-size: clamp(3rem, 6vw, 5rem);
+            font-weight: 700;
             margin-bottom: 1rem;
             opacity: 0;
-            transform: translateY(30px);
-            animation: fadeInUp 1s ease 0.3s forwards;
+            transform: translateY(30px) scale(0.9);
+            animation: fadeInBounce 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.3s forwards;
+            text-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.2),
+                0 0 40px rgba(255, 255, 255, 0.3);
+            letter-spacing: -0.02em;
+        }
+
+        @keyframes fadeInBounce {
+            0% {
+                opacity: 0;
+                transform: translateY(30px) scale(0.9);
+            }
+            60% {
+                opacity: 1;
+                transform: translateY(-10px) scale(1.05);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
         .header p {
-            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
-            opacity: 0.9;
-            font-weight: 300;
-            max-width: 600px;
+            font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+            opacity: 0.95;
+            font-weight: 400;
+            max-width: 700px;
             margin: 0 auto;
             opacity: 0;
             transform: translateY(30px);
             animation: fadeInUp 1s ease 0.6s forwards;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            background: linear-gradient(to right, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 1));
+            -webkit-background-clip: text;
+            background-clip: text;
         }
 
         .floating-elements {
@@ -214,33 +300,46 @@
 
         .floating-element {
             position: absolute;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            animation: float 6s ease-in-out infinite;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            animation: float 8s ease-in-out infinite, morphShape 6s ease-in-out infinite;
+            filter: blur(1px);
         }
 
         .floating-element:nth-child(1) {
-            width: 80px;
-            height: 80px;
-            top: 20%;
-            left: 10%;
-            animation-delay: 0s;
+            width: 100px;
+            height: 100px;
+            top: 15%;
+            left: 8%;
+            animation-delay: 0s, 0s;
+            background: rgba(255, 200, 87, 0.2);
         }
 
         .floating-element:nth-child(2) {
-            width: 120px;
-            height: 120px;
-            top: 60%;
-            right: 15%;
-            animation-delay: 2s;
+            width: 140px;
+            height: 140px;
+            top: 50%;
+            right: 10%;
+            animation-delay: 2s, 1s;
+            background: rgba(107, 207, 126, 0.2);
         }
 
         .floating-element:nth-child(3) {
-            width: 60px;
-            height: 60px;
-            top: 80%;
-            left: 80%;
-            animation-delay: 4s;
+            width: 80px;
+            height: 80px;
+            top: 75%;
+            left: 75%;
+            animation-delay: 4s, 3s;
+            background: rgba(255, 107, 157, 0.2);
+        }
+
+        @keyframes morphShape {
+            0%, 100% {
+                border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            }
+            50% {
+                border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%;
+            }
         }
 
         /* Main content */
@@ -261,11 +360,13 @@
         }
 
         .section h2 {
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
-            color: var(--secondary-color);
+            font-family: 'Fredoka', sans-serif;
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            color: var(--primary-color);
             margin-bottom: 2rem;
             position: relative;
-            padding-bottom: 1rem;
+            padding-bottom: 1.5rem;
+            font-weight: 600;
         }
 
         .section h2::after {
@@ -273,10 +374,24 @@
             position: absolute;
             bottom: 0;
             left: 0;
-            width: 60px;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-            border-radius: 2px;
+            width: 80px;
+            height: 8px;
+            background: linear-gradient(90deg, var(--accent-color), var(--primary-color), var(--secondary-color));
+            border-radius: var(--radius-pill);
+            box-shadow: 0 2px 4px rgba(255, 107, 157, 0.3);
+        }
+
+        .section h2::before {
+            content: attr(data-emoji);
+            display: inline-block;
+            margin-right: 0.5rem;
+            font-size: 1.2em;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
         }
 
         .section p {
@@ -290,9 +405,17 @@
             padding: 3rem;
             border-radius: var(--radius-lg);
             margin: 3rem 0;
-            border: 1px solid var(--border-color);
+            border: 4px solid var(--primary-color);
             position: relative;
             overflow: hidden;
+            box-shadow: var(--shadow-toy), var(--shadow-md);
+            transform: rotate(-0.5deg);
+        }
+
+        .usecase-section:hover {
+            transform: rotate(0deg) translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            transition: all var(--transition-bounce);
         }
 
         .usecase-section::before {
@@ -301,22 +424,29 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            height: 8px;
+            background: linear-gradient(90deg, var(--accent-color), var(--primary-color), var(--secondary-color), var(--success-color));
         }
 
         /* Code blocks */
         .code-block {
-            background: #1a202c;
-            color: #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 1.5rem;
+            background: #1E1433;
+            color: #F0E6FF;
+            border-radius: var(--radius-lg);
+            padding: 2rem;
             overflow-x: auto;
             font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
             font-size: 0.9rem;
             margin: 1.5rem 0;
             position: relative;
-            border: 1px solid #2d3748;
+            border: 4px solid var(--secondary-color);
+            box-shadow: var(--shadow-toy), var(--shadow-md);
+            transform: rotate(0.5deg);
+        }
+
+        .code-block:hover {
+            transform: rotate(0deg);
+            transition: all var(--transition-bounce);
         }
 
         .code-block::before {
@@ -325,8 +455,8 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color));
         }
 
         .code-header {
@@ -346,53 +476,70 @@
         }
 
         .copy-btn {
-            background: #2d3748;
-            border: 1px solid #4a5568;
-            color: #e2e8f0;
-            padding: 0.25rem 0.75rem;
-            border-radius: var(--radius-sm);
+            background: var(--success-color);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: var(--radius-pill);
             cursor: pointer;
-            font-size: 0.8rem;
-            transition: all var(--transition-fast);
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all var(--transition-bounce);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
         }
 
         .copy-btn:hover {
-            background: #4a5568;
-            transform: translateY(-1px);
+            background: var(--primary-color);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0) scale(0.98);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
         }
 
         .copy-btn.copied {
-            background: #38a169;
-            border-color: #38a169;
+            background: var(--accent-color);
+            border-color: rgba(255, 255, 255, 0.5);
+            animation: wiggle 0.5s ease;
+        }
+
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
         }
 
         .comment {
-            color: #68d391;
+            color: #A78BFA;
+            font-style: italic;
         }
 
         .string {
-            color: #fbd38d;
+            color: #FCD34D;
         }
 
         .keyword {
-            color: #90cdf4;
+            color: #6BCF7E;
+            font-weight: 600;
         }
 
         /* Feature grid */
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
+            gap: 2.5rem;
             margin: 3rem 0;
         }
 
         .feature {
-            background: var(--bg-color);
-            padding: 2rem;
+            background: var(--surface-color);
+            padding: 2.5rem;
             border-radius: var(--radius-lg);
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow-light);
-            transition: all var(--transition-smooth);
+            border: 4px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition-bounce);
             position: relative;
             overflow: hidden;
         }
@@ -403,10 +550,11 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            height: 8px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color));
             transform: scaleX(0);
-            transition: transform var(--transition-smooth);
+            transform-origin: left;
+            transition: transform var(--transition-bounce);
         }
 
         .feature:hover::before {
@@ -414,60 +562,98 @@
         }
 
         .feature:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-heavy);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary-color);
         }
 
         .feature h3 {
+            font-family: 'Fredoka', sans-serif;
             color: var(--secondary-color);
             margin-bottom: 1rem;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
+            font-weight: 600;
         }
 
         .feature-icon {
-            font-size: 1.5rem;
+            font-size: 2rem;
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+
+        .feature ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .feature ul li {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--text-color);
+            padding: 0.5rem 0;
+            font-weight: 400;
+        }
+
+        .feature ul li code {
+            background: var(--border-color);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        .feature h4 {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
         }
 
         /* Installation tabs */
         .install-tabs {
             display: flex;
             margin: 2rem 0 1rem;
-            border-bottom: 2px solid var(--border-color);
-            gap: 0.5rem;
+            gap: 0.75rem;
+            flex-wrap: wrap;
         }
 
         .install-tab {
-            background: none;
-            border: none;
-            padding: 1rem 1.5rem;
+            background: var(--surface-color);
+            border: 3px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
             cursor: pointer;
-            color: var(--text-light);
-            font-weight: 500;
-            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-            transition: all var(--transition-fast);
+            color: var(--text-color);
+            font-weight: 600;
+            border-radius: var(--radius-pill);
+            transition: all var(--transition-bounce);
             position: relative;
+            font-size: 0.95rem;
+        }
+
+        .install-tab:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: var(--shadow-sm);
         }
 
         .install-tab.active {
-            color: var(--primary-color);
-            background: var(--surface-color);
+            color: white;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-toy);
         }
 
-        .install-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--primary-color);
+        .install-tab.active:hover {
+            transform: translateY(-3px) scale(1.05) rotate(-2deg);
         }
 
         .install-content {
@@ -480,39 +666,56 @@
 
         /* Expandable details */
         .expandable {
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
+            border: 4px solid var(--primary-color);
+            border-radius: var(--radius-lg);
             margin: 2rem 0;
             overflow: hidden;
+            box-shadow: var(--shadow-toy), var(--shadow-sm);
+            transition: all var(--transition-bounce);
+        }
+
+        .expandable:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
         }
 
         .expandable-header {
-            background: var(--surface-color);
-            padding: 1.5rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 1.5rem 2rem;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: background-color var(--transition-fast);
+            transition: all var(--transition-bounce);
         }
 
         .expandable-header:hover {
-            background: var(--border-color);
+            padding-left: 2.5rem;
         }
 
         .expandable-title {
-            font-weight: 600;
-            color: var(--text-color);
+            font-weight: 700;
+            font-family: 'Fredoka', sans-serif;
+            color: white;
+            font-size: 1.1rem;
         }
 
         .expandable-icon {
-            font-size: 1.2rem;
-            color: var(--primary-color);
-            transition: transform var(--transition-fast);
+            font-size: 1.5rem;
+            color: white;
+            transition: transform var(--transition-bounce);
+            background: rgba(255, 255, 255, 0.2);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .expandable.open .expandable-icon {
             transform: rotate(180deg);
+            background: rgba(255, 255, 255, 0.3);
         }
 
         .expandable-content {
@@ -535,10 +738,11 @@
             top: 0;
             left: 0;
             width: 0%;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color), var(--success-color));
             z-index: 1001;
-            transition: width var(--transition-fast);
+            transition: width 0.1s ease;
+            box-shadow: 0 2px 8px rgba(255, 107, 157, 0.4);
         }
 
         /* Footer */
@@ -546,19 +750,36 @@
             text-align: center;
             margin-top: 6rem;
             padding: 3rem 0;
-            border-top: 1px solid var(--border-color);
-            background: var(--surface-color);
+            border-top: 6px solid var(--primary-color);
+            background: linear-gradient(135deg, var(--surface-color), var(--bg-color));
             border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color));
         }
 
         .footer a {
             color: var(--primary-color);
             text-decoration: none;
-            transition: color var(--transition-fast);
+            font-weight: 600;
+            transition: all var(--transition-bounce);
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-sm);
         }
 
         .footer a:hover {
             color: var(--accent-color);
+            background: var(--border-color);
+            transform: scale(1.05);
         }
 
         /* Back to top button */
@@ -566,30 +787,39 @@
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            background: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
             color: white;
-            border: none;
-            width: 50px;
-            height: 50px;
+            border: 4px solid white;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 1.2rem;
-            transition: all var(--transition-smooth);
+            font-size: 1.8rem;
+            font-weight: 700;
+            transition: all var(--transition-bounce);
             opacity: 0;
             visibility: hidden;
-            transform: translateY(20px);
+            transform: translateY(20px) scale(0.8);
             z-index: 1000;
+            box-shadow: var(--shadow-toy), var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .back-to-top.visible {
             opacity: 1;
             visibility: visible;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
 
         .back-to-top:hover {
-            background: var(--accent-color);
-            transform: translateY(-3px);
+            transform: translateY(-8px) scale(1.1) rotate(-10deg);
+            box-shadow: 0 8px 0 rgba(255, 107, 157, 0.4), var(--shadow-lg);
+        }
+
+        .back-to-top:active {
+            transform: translateY(-4px) scale(0.95);
         }
 
         /* Animations */
@@ -606,10 +836,13 @@
 
         @keyframes float {
             0%, 100% {
-                transform: translateY(0) rotate(0deg);
+                transform: translateY(0) rotate(0deg) scale(1);
             }
-            50% {
-                transform: translateY(-20px) rotate(180deg);
+            33% {
+                transform: translateY(-15px) rotate(120deg) scale(1.1);
+            }
+            66% {
+                transform: translateY(-25px) rotate(240deg) scale(0.9);
             }
         }
 
@@ -663,6 +896,7 @@
             <ul class="nav-links">
                 <li><a href="#about" data-scroll="about">About</a></li>
                 <li><a href="#features" data-scroll="features">Features</a></li>
+                <li><a href="#filtering" data-scroll="filtering">Filtering</a></li>
                 <li><a href="#installation" data-scroll="installation">Installation</a></li>
                 <li><a href="#prompts" data-scroll="prompts">Prompts</a></li>
                 <li><a href="#examples" data-scroll="examples">Examples</a></li>
@@ -744,7 +978,7 @@
                     </div>
                     <div class="feature">
                         <h3><span class="feature-icon">🔧</span>Flexible Filtering</h3>
-                        <p>Use <code>--exclude</code> and <code>--include</code> options to omit or target specific files and directories. Smart dotfile exclusion with override capabilities.</p>
+                        <p>Use <code>--exclude</code> and <code>--include</code> options with powerful glob pattern support. Non-recursive patterns like <code>*.md</code> are anchored to root, while <code>**/*.md</code> matches recursively throughout your project. Override defaults with explicit includes.</p>
                     </div>
                     <div class="feature">
                         <h3><span class="feature-icon">📊</span>Smart File Size Management</h3>
@@ -761,6 +995,159 @@
                     <div class="feature">
                         <h3><span class="feature-icon">🎯</span>Structured Output</h3>
                         <p>Generates organized Markdown with Source Code Size Check, Project Structure, Source Files, and Configuration sections in logical order.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" id="filtering">
+                <h2 data-emoji="🔍">Filtering and Exclusion Behavior</h2>
+                <p>
+                    <strong>list-codes</strong> provides powerful filtering capabilities with glob pattern support, automatic exclusions, and a clear priority system to give you precise control over which files are included in your code analysis.
+                </p>
+
+                <h3>Automatic Exclusions</h3>
+                <p>
+                    The tool automatically excludes certain files and directories to focus on relevant source code:
+                </p>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h4>Dotfiles and Dot-directories</h4>
+                        <p>All files and directories starting with a dot (<code>.</code>) are excluded by default:</p>
+                        <ul>
+                            <li><code>.git</code>, <code>.gitignore</code>, <code>.github/</code></li>
+                            <li><code>.vscode/</code>, <code>.idea/</code></li>
+                            <li><code>.env</code>, <code>.DS_Store</code></li>
+                            <li><code>.terraform/</code>, <code>.serverless/</code></li>
+                            <li><code>.pytest_cache/</code>, <code>.mypy_cache/</code></li>
+                        </ul>
+                    </div>
+                    <div class="feature">
+                        <h4>Build and Dependency Directories</h4>
+                        <p>Common build artifacts and dependency directories are excluded:</p>
+                        <ul>
+                            <li><code>node_modules/</code>, <code>vendor/</code>, <code>target/</code></li>
+                            <li><code>build/</code>, <code>dist/</code>, <code>__pycache__/</code></li>
+                            <li><code>env/</code>, <code>venv/</code></li>
+                        </ul>
+                    </div>
+                    <div class="feature">
+                        <h4>Gitignore Integration</h4>
+                        <p>Automatically respects your project's <code>.gitignore</code> rules:</p>
+                        <ul>
+                            <li>Hierarchical processing with proper precedence</li>
+                            <li>Full pattern support (wildcards, negation)</li>
+                            <li>Override with <code>--include</code> flag</li>
+                            <li>Disable with <code>--no-gitignore</code> option</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Glob Pattern Anchoring ⭐</h3>
+                <p>
+                    <strong>Critical behavior:</strong> Both <code>--include</code> and <code>--exclude</code> flags support glob patterns with automatic anchoring behavior:
+                </p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Non-recursive Patterns (Anchored to Root)</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre><code><span class="comment"># *.md - Matches .md files ONLY in the project root (non-recursive)</span>
+<span class="keyword">list-codes</span> --exclude <span class="string">"*.md"</span>
+
+<span class="comment"># src/*.ts - Matches .ts files only inside the src directory (not subdirectories)</span>
+<span class="keyword">list-codes</span> --include <span class="string">"src/*.ts"</span></code></pre>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Recursive Patterns (Use **)</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre><code><span class="comment"># **/*.md - Matches .md files recursively in all directories</span>
+<span class="keyword">list-codes</span> --exclude <span class="string">"**/*.md"</span>
+
+<span class="comment"># src/**/*.ts - Matches .ts files recursively within src and subdirectories</span>
+<span class="keyword">list-codes</span> --include <span class="string">"src/**/*.ts"</span></code></pre>
+                </div>
+
+                <h3>Exclusion Priority System</h3>
+                <p>
+                    The filtering logic follows a clear 4-level priority hierarchy:
+                </p>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h4>1️⃣ Explicit Exclusions (Highest Priority)</h4>
+                        <p><code>--exclude</code> flags always win, even inside explicitly included folders. This allows recursive exclusion within included paths.</p>
+                    </div>
+                    <div class="feature">
+                        <h4>2️⃣ Include Whitelist</h4>
+                        <p><code>--include</code> flags override default dotfile exclusion and <code>.gitignore</code> rules. Only whitelisted paths are processed when includes are specified.</p>
+                    </div>
+                    <div class="feature">
+                        <h4>3️⃣ Gitignore Rules</h4>
+                        <p>Project <code>.gitignore</code> patterns are respected unless overridden by <code>--include</code>. Nested gitignore files are processed with proper precedence.</p>
+                    </div>
+                    <div class="feature">
+                        <h4>4️⃣ Default Exclusions</h4>
+                        <p>Built-in exclusions for dotfiles, <code>node_modules</code>, <code>vendor</code>, build directories apply if not explicitly included.</p>
+                    </div>
+                </div>
+
+                <div class="expandable">
+                    <div class="expandable-header" onclick="toggleExpandable(this)">
+                        <span class="expandable-title">📚 Practical Filtering Examples</span>
+                        <span class="expandable-icon">▼</span>
+                    </div>
+                    <div class="expandable-content">
+                        <div class="expandable-inner">
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example 1: Exclude Root Markdown Files Only</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre><code><span class="comment"># Excludes README.md, CHANGELOG.md in root, but keeps docs/guide.md</span>
+<span class="keyword">list-codes</span> --exclude <span class="string">"*.md"</span></code></pre>
+                            </div>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example 2: Exclude All Markdown Files Recursively</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre><code><span class="comment"># Excludes all .md files throughout the entire project</span>
+<span class="keyword">list-codes</span> --exclude <span class="string">"**/*.md"</span></code></pre>
+                            </div>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example 3: Include Directory with Recursive Exclusion</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre><code><span class="comment"># Include src directory but exclude the secret subdirectory within it</span>
+<span class="keyword">list-codes</span> --include <span class="string">"src"</span> --exclude <span class="string">"src/secret"</span></code></pre>
+                            </div>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example 4: Override Dotfile Exclusion</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre><code><span class="comment"># Include .github directory (normally excluded as a dotfile)</span>
+<span class="keyword">list-codes</span> --include <span class="string">".github/**"</span></code></pre>
+                            </div>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example 5: Exclude Tests but Include CI Workflows</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre><code><span class="comment"># Exclude all test files but include .github workflows</span>
+<span class="keyword">list-codes</span> --exclude <span class="string">"**/*test*"</span> --include <span class="string">".github/workflows/**"</span></code></pre>
+                            </div>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-title">Example 6: Target Specific File Types in Subdirectory</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                </div>
+                                <pre><code><span class="comment"># Include only TypeScript files within components directory and subdirectories</span>
+<span class="keyword">list-codes</span> --include <span class="string">"components/**/*.ts"</span></code></pre>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -868,8 +1255,8 @@
 --prompt, -p      <span class="string">Prompt text or template name to prepend to output</span>
 
 <span class="comment"># Filtering options</span>
---include, -i     <span class="string">Folder path to include (repeatable)</span>
---exclude, -e     <span class="string">Folder path to exclude (repeatable)</span>
+--include, -i     <span class="string">File/folder path to include, overrides default exclusions (repeatable, supports glob patterns)</span>
+--exclude, -e     <span class="string">File/folder path to exclude, takes highest priority (repeatable, supports glob patterns)</span>
 --readme-only     <span class="string">Only collect README.md files</span>
 --max-file-size   <span class="string">Maximum file size (supports 1m, 500k, 2g) (default: 1m)</span>
 --max-total-size  <span class="string">Maximum total file size (supports 10m, 1g) - empty means no limit</span>
