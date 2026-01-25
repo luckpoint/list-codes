@@ -38,8 +38,13 @@ The collection stage runs in two main passes:
 * Files matching `.gitignore` patterns (**Implemented** - See section 3.4)
 
 ### 3.2 CLI-based Exclusions
-* Paths explicitly provided via `--exclude` option (highest priority)
-* When `--include` is used, only whitelisted paths are processed
+* **Glob Pattern Support**: Both `--include` and `--exclude` support glob patterns (wildcards).
+    * **Non-recursive**: Patterns without recursive wildcards (e.g., `*.md`) are **anchored to the project root**. They match files only in the root directory, not in subdirectories.
+    * **Recursive**: Use double asterisks (`**`) for recursive matching (e.g., `**/*.md` matches `.md` files in all directories).
+    * **Path Resolution**: All patterns are treated as relative to the project root folder.
+* **Exclusion Priority**: Explicit exclusions (`--exclude`) take the highest priority.
+    * **Recursive Exclusion within Includes**: Exclusions apply even within directories that have been explicitly included. For example, if you include `src` but exclude `src/secret`, the `secret` directory will be skipped.
+* **Include-only mode**: When `--include` is used, only whitelisted paths (and their children, unless excluded) are processed.
 
 ### 3.3 Test File Detection
 Test files are automatically excluded unless `--include-tests` is specified. Detection uses:

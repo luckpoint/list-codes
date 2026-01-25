@@ -137,22 +137,34 @@ list-codes --include ".github/**"
 
 The filtering logic follows a clear priority system:
 
-1. **Explicit exclusions** (`--exclude`) always win
-2. **Include whitelist** (`--include`) overrides default dotfile exclusion
-3. **Default dotfile exclusion** applies if not explicitly included
-4. **Include-only mode**: When using `--include`, only whitelisted items are processed
+1. **Explicit exclusions** (`--exclude`) always win, even inside included folders.
+2. **Include whitelist** (`--include`) overrides default dotfile exclusion.
+3. **Default dotfile exclusion** applies if not explicitly included.
+4. **Gitignore rules** are respected unless overridden by `--include`.
+
+### Glob Patterns and Anchoring
+
+Both `--include` and `--exclude` flags support glob patterns, following a behavior similar to Python's `glob` module:
+
+- `*.md`: Matches `.md` files **only in the project root** (non-recursive).
+- `**/*.md`: Matches `.md` files **recursively** in all directories.
+- `src/*.ts`: Matches `.ts` files only inside the `src` directory.
+- `src/**/*.ts`: Matches `.ts` files recursively within `src` and its subdirectories.
 
 ### Example Filtering Scenarios
 
 ```bash
+# Exclude root Markdown files only
+list-codes --exclude "*.md"
+
+# Exclude all Markdown files recursively
+list-codes --exclude "**/*.md"
+
+# Include a specific directory but exclude a sub-directory within it
+list-codes --include "src" --exclude "src/secret"
+
 # Exclude all test files but include .github workflows
 list-codes --exclude "**/*test*" --include ".github/workflows/**"
-
-# Include only specific source directories, excluding dotfiles elsewhere
-list-codes --include "src/**" --include "lib/**"
-
-# Include documentation from typically excluded directories
-list-codes --include ".github/**.md" --include "docs/**"
 ```
 
 ## Output Format
