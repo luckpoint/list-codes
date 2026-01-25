@@ -113,24 +113,18 @@ var rootCmd = &cobra.Command{
 		// Process excludes
 		var excludePatterns []string
 		for _, p := range excludes {
+			// If it contains glob characters, use it as a raw pattern
+			if strings.ContainsAny(p, "*?[]") {
+				excludePatterns = append(excludePatterns, filepath.ToSlash(p))
+				continue
+			}
+
 			// Resolve to absolute path first to handle "relative to current dir" vs "relative to folder"
-			// But wait, the user input might be a glob pattern.
-			// If it's a simple path, we treat it relative to 'folder'.
-			// If it's a glob, we also treat it relative to 'folder' usually.
-
-			// We construct a pattern relative to the project root ('folder')
-			// taking into account that the user might be running from outside 'folder'.
-
-			// Strategy:
-			// 1. If p is absolute, Rel(folder, p).
-			// 2. If p is relative, Join(folder, p) -> Abs -> Rel(folder, p).
-			//    This ensures we normalize ../ stuff.
-
 			abs := p
 			if !filepath.IsAbs(abs) {
 				abs = filepath.Join(folder, p)
 			}
-			abs, err := filepath.Abs(abs)
+			abs, err = filepath.Abs(abs)
 			if err == nil {
 				rel, err := filepath.Rel(folderAbs, abs)
 				if err == nil {
@@ -161,6 +155,12 @@ var rootCmd = &cobra.Command{
 		var includePatterns []string
 
 		for _, p := range includes {
+			// If it contains glob characters, use it as a raw pattern
+			if strings.ContainsAny(p, "*?[]") {
+				includePatterns = append(includePatterns, filepath.ToSlash(p))
+				continue
+			}
+
 			abs := p
 			if !filepath.IsAbs(abs) {
 				abs = filepath.Join(folder, p)
