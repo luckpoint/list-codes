@@ -1,3 +1,4 @@
+![list-codes-logo](https://github.com/user-attachments/assets/2668fa42-2bec-4426-91f0-72c04536aa8f)
 
 # list-codes - Source Code Analysis Assistant for LLMs
 
