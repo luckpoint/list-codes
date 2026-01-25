@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/luckpoint/list-codes/utils"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -31,7 +31,7 @@ var (
 func init() {
 	// Parse --lang flag early before Cobra processes it
 	langSet := parseLanguageFlag()
-	
+
 	// Initialize i18n with debug mode check
 	debugMode := false
 	for _, arg := range os.Args {
@@ -40,17 +40,17 @@ func init() {
 			break
 		}
 	}
-	
+
 	if !langSet {
 		utils.InitI18n(debugMode)
 	}
-	
+
 	// Set help messages based on current language
 	short, long, completionHelp := utils.GetHelpMessages()
 	rootCmd.Short = short
 	rootCmd.Long = long
 	completionCmd.Long = completionHelp
-	
+
 	// Flag descriptions (always in English for technical consistency)
 	rootCmd.PersistentFlags().StringVarP(&folder, "folder", "f", ".", "Folder to scan")
 	rootCmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "", "Output Markdown file path")
@@ -74,7 +74,7 @@ func init() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "list-codes",
+	Use: "list-codes",
 	// Short and Long will be set dynamically based on locale
 	Run: func(cmd *cobra.Command, args []string) {
 		// Handle version flag
@@ -103,40 +103,92 @@ var rootCmd = &cobra.Command{
 		}
 		utils.PrintDebug("Default exclude names: "+joinSet(excludeNames), debugMode)
 
-		excludePaths := make(map[string]struct{})
-		for _, p := range excludes {
-			abs := p
-			if !filepath.IsAbs(abs) {
-				abs = filepath.Join(folder, p)
-			}
-			if resolved, err := filepath.Abs(abs); err == nil {
-				excludePaths[resolved] = struct{}{}
-			} else {
-				utils.PrintWarning(fmt.Sprintf("Could not resolve absolute path for exclude '%s': %v", p, err), debugMode)
-			}
-		}
-		utils.PrintDebug("User excluded absolute paths: "+joinSet(excludePaths), debugMode)
-
-		includePaths := make(map[string]struct{})
-		for _, p := range includes {
-			abs := p
-			if !filepath.IsAbs(abs) {
-				abs = filepath.Join(folder, p)
-			}
-			if resolved, err := filepath.Abs(abs); err == nil {
-				includePaths[resolved] = struct{}{}
-			} else {
-				utils.PrintWarning(fmt.Sprintf("Could not resolve absolute path for include '%s': %v", p, err), debugMode)
-			}
-		}
-		utils.PrintDebug("User included absolute paths: "+joinSet(includePaths), debugMode)
-
 		folderAbs, err := filepath.Abs(folder)
 		if err != nil {
 			utils.PrintError(fmt.Sprintf("Could not resolve absolute path for folder '%s': %v", folder, err))
 			os.Exit(1)
 		}
 		utils.PrintDebug("Scanning folder: "+folderAbs, debugMode)
+
+		// Process excludes
+		var excludePatterns []string
+		for _, p := range excludes {
+			// Resolve to absolute path first to handle "relative to current dir" vs "relative to folder"
+			// But wait, the user input might be a glob pattern.
+			// If it's a simple path, we treat it relative to 'folder'.
+			// If it's a glob, we also treat it relative to 'folder' usually.
+
+			// We construct a pattern relative to the project root ('folder')
+			// taking into account that the user might be running from outside 'folder'.
+
+			// Strategy:
+			// 1. If p is absolute, Rel(folder, p).
+			// 2. If p is relative, Join(folder, p) -> Abs -> Rel(folder, p).
+			//    This ensures we normalize ../ stuff.
+
+			abs := p
+			if !filepath.IsAbs(abs) {
+				abs = filepath.Join(folder, p)
+			}
+			abs, err := filepath.Abs(abs)
+			if err == nil {
+				rel, err := filepath.Rel(folderAbs, abs)
+				if err == nil {
+					// Windows backslash to slash
+					rel = filepath.ToSlash(rel)
+					// Anchor to root to preserve "path relative to folder" semantics
+					// and prevent accidental matching of deeply nested files with same name
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					excludePatterns = append(excludePatterns, rel)
+				}
+			} else {
+				utils.PrintWarning(fmt.Sprintf("Could not resolve path for exclude '%s': %v", p, err), debugMode)
+			}
+		}
+
+		excludeMatcher, err := utils.NewSimpleMatcher(folderAbs, excludePatterns)
+		if err != nil {
+			utils.PrintWarning(fmt.Sprintf("Failed to create exclude matcher: %v", err), debugMode)
+		}
+		if len(excludePatterns) > 0 {
+			utils.PrintDebug("User exclude patterns: "+strings.Join(excludePatterns, ", "), debugMode)
+		}
+
+		// Process includes
+		includePaths := make(map[string]struct{})
+		var includePatterns []string
+
+		for _, p := range includes {
+			abs := p
+			if !filepath.IsAbs(abs) {
+				abs = filepath.Join(folder, p)
+			}
+			resolved, err := filepath.Abs(abs)
+			if err == nil {
+				// Add to map for "parent of" traversal logic
+				includePaths[resolved] = struct{}{}
+
+				// Add to patterns
+				rel, err := filepath.Rel(folderAbs, resolved)
+				if err == nil {
+					rel = filepath.ToSlash(rel)
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					includePatterns = append(includePatterns, rel)
+				}
+			} else {
+				utils.PrintWarning(fmt.Sprintf("Could not resolve absolute path for include '%s': %v", p, err), debugMode)
+			}
+		}
+
+		includeMatcher, err := utils.NewSimpleMatcher(folderAbs, includePatterns)
+		if err != nil {
+			utils.PrintWarning(fmt.Sprintf("Failed to create include matcher: %v", err), debugMode)
+		}
+		utils.PrintDebug("User included absolute paths: "+joinSet(includePaths), debugMode)
 
 		// Create GitIgnoreMatcher if --no-gitignore is not set
 		var gitIgnoreMatcher *utils.GitIgnoreMatcher
@@ -155,10 +207,10 @@ var rootCmd = &cobra.Command{
 		var outputMD string
 		if readmeOnly {
 			utils.PrintDebug("Mode: Collecting README.md files only.", debugMode)
-			outputMD = utils.CollectReadmeFiles(folderAbs, includePaths, excludeNames, excludePaths, debugMode, gitIgnoreMatcher)
+			outputMD = utils.CollectReadmeFiles(folderAbs, includePaths, includeMatcher, excludeNames, excludeMatcher, debugMode, gitIgnoreMatcher)
 		} else {
 			utils.PrintDebug("Mode: Summarizing project.", debugMode)
-			outputMD = utils.ProcessSourceFiles(folderAbs, maxDepth, includePaths, excludeNames, excludePaths, debugMode, includeTests, gitIgnoreMatcher)
+			outputMD = utils.ProcessSourceFiles(folderAbs, maxDepth, includePaths, includeMatcher, excludeNames, excludeMatcher, debugMode, includeTests, gitIgnoreMatcher)
 		}
 
 		// Apply prompt if specified

@@ -75,13 +75,13 @@ func IsAssetFile(filePath string, debug bool) bool {
 
 // shouldSkipDir determines whether to skip directories or files based on a set of rules.
 // The logic prioritizes user intent with additive include behavior:
-// 1. User-defined exclusions (--exclude) always result in a skip.
-// 2. If --include is used, items matching include patterns override default exclusions.
-//    This rule overrides the default dotfile exclusion and .gitignore rules.
-// 3. .gitignore matcher (if provided) - files/dirs matching .gitignore patterns are skipped.
-// 4. Any item starting with a '.' is skipped by default (unless explicitly included).
-// 5. Normal source file inclusion continues (no include-only mode).
-func shouldSkipDir(fullPath, name string, isDir bool, includePaths, excludeNames, excludePaths map[string]struct{}, gi *GitIgnoreMatcher) bool {
+//  1. User-defined exclusions (--exclude) always result in a skip.
+//  2. If --include is used, items matching include patterns override default exclusions.
+//     This rule overrides the default dotfile exclusion and .gitignore rules.
+//  3. .gitignore matcher (if provided) - files/dirs matching .gitignore patterns are skipped.
+//  4. Any item starting with a '.' is skipped by default (unless explicitly included).
+//  5. Normal source file inclusion continues (no include-only mode).
+func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, gi *GitIgnoreMatcher) bool {
 	absPath, err := filepath.Abs(fullPath)
 	if err != nil {
 		PrintWarning(fmt.Sprintf("Could not get absolute path for %s: %v", fullPath, err), true)
@@ -92,22 +92,31 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths, excludeNames
 	if _, ok := excludeNames[name]; ok {
 		return true
 	}
-	if _, ok := excludePaths[absPath]; ok {
+	if excludeMatcher != nil && excludeMatcher.Match(absPath) {
 		return true
 	}
 
 	// Priority 2: Include additions override default exclusions.
 	// If an item is explicitly included or is a parent of an included item,
 	// it should NOT be skipped, even if it's a dotfile or matches .gitignore.
-	if len(includePaths) > 0 {
+	if (includeMatcher != nil && includeMatcher.HasPatterns()) || len(includePaths) > 0 {
 		isExplicitlyIncluded := false
-		for incPath := range includePaths {
-			// A path is included if it's the included path itself, or a parent of it.
-			// e.g., include "a/b", current is "a" -> strings.HasPrefix("a/b", "a") -> true
-			// e.g., include "a/b", current is "a/b" -> strings.HasPrefix("a/b", "a/b") -> true
-			if strings.HasPrefix(incPath, absPath) || strings.HasPrefix(absPath, incPath) {
-				isExplicitlyIncluded = true
-				break
+
+		// Check patterns
+		if includeMatcher != nil && includeMatcher.Match(absPath) {
+			isExplicitlyIncluded = true
+		}
+
+		// Check fixed paths (parent traversal)
+		if !isExplicitlyIncluded && len(includePaths) > 0 {
+			for incPath := range includePaths {
+				// A path is included if it's the included path itself, or a parent of it.
+				// e.g., include "a/b", current is "a" -> strings.HasPrefix("a/b", "a") -> true
+				// e.g., include "a/b", current is "a/b" -> strings.HasPrefix("a/b", "a/b") -> true
+				if strings.HasPrefix(incPath, absPath) || strings.HasPrefix(absPath, incPath) {
+					isExplicitlyIncluded = true
+					break
+				}
 			}
 		}
 
@@ -133,7 +142,7 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths, excludeNames
 }
 
 // GenerateDirectoryStructure generates the project directory structure in Markdown format.
-func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, includePaths, excludeNames, excludePaths map[string]struct{}, includeTests bool, gi *GitIgnoreMatcher) string {
+func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, includeTests bool, gi *GitIgnoreMatcher) string {
 	PrintDebug("Generating directory structure...", debugMode)
 	var structureLines []string
 	structureLines = append(structureLines, "## Project Structure", "```text")
@@ -161,7 +170,7 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 		var filteredEntries []os.DirEntry
 		for _, entry := range entries {
 			itemPath := filepath.Join(currentPath, entry.Name())
-			if shouldSkipDir(itemPath, entry.Name(), entry.IsDir(), includePaths, excludeNames, excludePaths, gi) {
+			if shouldSkipDir(itemPath, entry.Name(), entry.IsDir(), includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 				continue
 			}
 			// Skip test files from directory structure
@@ -173,7 +182,12 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 				// Check if this file is explicitly included
 				absItemPath, _ := filepath.Abs(itemPath)
 				isExplicitlyIncluded := false
-				if len(includePaths) > 0 {
+
+				if includeMatcher != nil && includeMatcher.Match(absItemPath) {
+					isExplicitlyIncluded = true
+				}
+
+				if !isExplicitlyIncluded && len(includePaths) > 0 {
 					for incPath := range includePaths {
 						if strings.HasPrefix(absItemPath, incPath) || strings.HasPrefix(incPath, absItemPath) {
 							isExplicitlyIncluded = true
@@ -207,7 +221,7 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 
 		// Combine files and visible directories
 		entriesToShow := append(filesToShow, dirsToShow...)
-		
+
 		// Add ellipsis if there are hidden directories
 		showEllipsis := hasHiddenDirs
 
@@ -241,7 +255,7 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 }
 
 // CollectReadmeFiles collects README.md files in the project and returns their content in Markdown format.
-func CollectReadmeFiles(folderAbs string, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, gi *GitIgnoreMatcher) string {
+func CollectReadmeFiles(folderAbs string, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, debug bool, gi *GitIgnoreMatcher) string {
 	PrintDebug("Searching for README.md files...", debug)
 	var readmeFiles []string
 
@@ -252,14 +266,14 @@ func CollectReadmeFiles(folderAbs string, includePaths, excludeNames, excludePat
 		}
 
 		if d.IsDir() {
-			if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths, gi) {
+			if shouldSkipDir(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
 		if strings.ToLower(d.Name()) == "readme.md" {
-			if shouldSkipDir(path, d.Name(), false, includePaths, excludeNames, excludePaths, gi) {
+			if shouldSkipDir(path, d.Name(), false, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 				return nil
 			}
 
@@ -288,7 +302,7 @@ func CollectReadmeFiles(folderAbs string, includePaths, excludeNames, excludePat
 }
 
 // collectDependencyFiles collects dependency files.
-func collectDependencyFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, gi *GitIgnoreMatcher) (map[string][]string, map[string]struct{}) {
+func collectDependencyFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, debug bool, gi *GitIgnoreMatcher) (map[string][]string, map[string]struct{}) {
 	depFileContents := make(map[string][]string)
 	processedDepFiles := make(map[string]struct{})
 	// FRAMEWORK_DEPENDENCY_FILES has been removed, so this function no longer collects dependency files
@@ -296,7 +310,7 @@ func collectDependencyFiles(folderAbs string, primaryLangs []string, fallbackLan
 }
 
 // collectSourceFiles collects source code files.
-func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool, gi *GitIgnoreMatcher) (map[string][]string, int64, []string, bool) {
+func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs map[string]int, processedDepFiles map[string]struct{}, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, debug bool, includeTests bool, gi *GitIgnoreMatcher) (map[string][]string, int64, []string, bool) {
 	sourceFileContents := make(map[string][]string)
 	var totalFileSize int64
 	var skippedFileMessages []string
@@ -310,13 +324,13 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		}
 
 		if d.IsDir() {
-			if shouldSkipDir(path, d.Name(), true, includePaths, excludeNames, excludePaths, gi) {
+			if shouldSkipDir(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		if shouldSkipDir(path, d.Name(), false, includePaths, excludeNames, excludePaths, gi) {
+		if shouldSkipDir(path, d.Name(), false, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 			return nil
 		}
 
@@ -328,13 +342,18 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 			return nil
 		}
 		language := GetLanguageByExtension(d.Name())
-		
+
 		// Skip asset files unless explicitly included
 		if IsAssetFile(path, debug) {
 			// Check if this file is explicitly included
 			absPath, _ := filepath.Abs(path)
 			isExplicitlyIncluded := false
-			if len(includePaths) > 0 {
+
+			if includeMatcher != nil && includeMatcher.Match(absPath) {
+				isExplicitlyIncluded = true
+			}
+
+			if !isExplicitlyIncluded && len(includePaths) > 0 {
 				for incPath := range includePaths {
 					if strings.HasPrefix(absPath, incPath) || strings.HasPrefix(incPath, absPath) {
 						isExplicitlyIncluded = true
@@ -419,4 +438,3 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 
 	return sourceFileContents, totalFileSize, skippedFileMessages, limitHit
 }
-

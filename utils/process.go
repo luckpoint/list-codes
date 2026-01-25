@@ -21,12 +21,12 @@ func buildMarkdownOutput(directoryStructureMD string, depFileContents map[string
 	// Show Source Code Size Check section FIRST if we have collected files OR if we have skipped files
 	if hasSourceFiles || len(skippedFileMessages) > 0 {
 		outputMDParts = append(outputMDParts, "## Source Code Size Check\n")
-		
+
 		// Add file size statistics
 		fileSizeMB := float64(totalFileSize) / (1024 * 1024)
 		maxFileSizeMB := float64(MaxFileSizeBytes) / (1024 * 1024)
 		totalLimitMB := float64(TotalMaxFileSizeBytes) / (1024 * 1024)
-		
+
 		var statsParts []string
 		statsParts = append(statsParts, fmt.Sprintf("%.2f MB collected", fileSizeMB))
 		statsParts = append(statsParts, fmt.Sprintf("max file: %.1f MB", maxFileSizeMB))
@@ -38,13 +38,13 @@ func buildMarkdownOutput(directoryStructureMD string, depFileContents map[string
 		} else {
 			statsParts = append(statsParts, "max total: unlimited")
 		}
-		
+
 		statsText := fmt.Sprintf("**File Statistics**: %s\n", strings.Join(statsParts, ", "))
 		outputMDParts = append(outputMDParts, statsText)
 
 		if len(skippedFileMessages) > 0 {
 			sort.Strings(skippedFileMessages)
-			
+
 			var skippedList []string
 			skippedList = append(skippedList, fmt.Sprintf("\n**Skipped %d file(s) > %.1f MB:**", len(skippedFileMessages), maxFileSizeMB))
 			for _, msg := range skippedFileMessages {
@@ -52,7 +52,7 @@ func buildMarkdownOutput(directoryStructureMD string, depFileContents map[string
 			}
 			outputMDParts = append(outputMDParts, strings.Join(skippedList, "\n"))
 		}
-		
+
 		outputMDParts = append(outputMDParts, "\n")
 	}
 
@@ -87,11 +87,11 @@ func buildMarkdownOutput(directoryStructureMD string, depFileContents map[string
 }
 
 // ProcessSourceFiles processes source files and generates a Markdown summary.
-func ProcessSourceFiles(folderAbs string, maxDepth int, includePaths, excludeNames, excludePaths map[string]struct{}, debug bool, includeTests bool, gi *GitIgnoreMatcher) string {
-	directoryStructureMD := GenerateDirectoryStructure(folderAbs, maxDepth, debug, includePaths, excludeNames, excludePaths, includeTests, gi)
+func ProcessSourceFiles(folderAbs string, maxDepth int, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, debug bool, includeTests bool, gi *GitIgnoreMatcher) string {
+	directoryStructureMD := GenerateDirectoryStructure(folderAbs, maxDepth, debug, includePaths, includeMatcher, excludeNames, excludeMatcher, includeTests, gi)
 
-	depFileContents, processedDepFiles := collectDependencyFiles(folderAbs, nil, nil, includePaths, excludeNames, excludePaths, debug, gi)
-	sourceFileContents, totalFileSize, skippedFileMessages, limitHit := collectSourceFiles(folderAbs, nil, nil, processedDepFiles, includePaths, excludeNames, excludePaths, debug, includeTests, gi)
+	depFileContents, processedDepFiles := collectDependencyFiles(folderAbs, nil, nil, includePaths, includeMatcher, excludeNames, excludeMatcher, debug, gi)
+	sourceFileContents, totalFileSize, skippedFileMessages, limitHit := collectSourceFiles(folderAbs, nil, nil, processedDepFiles, includePaths, includeMatcher, excludeNames, excludeMatcher, debug, includeTests, gi)
 
 	return buildMarkdownOutput(directoryStructureMD, depFileContents, sourceFileContents, totalFileSize, skippedFileMessages, limitHit, debug)
 }

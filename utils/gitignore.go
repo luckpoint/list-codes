@@ -35,7 +35,7 @@ func NewGitIgnoreMatcher(root string) (*GitIgnoreMatcher, error) {
 
 		if !d.IsDir() && d.Name() == ".gitignore" {
 			dir := filepath.Dir(path)
-			
+
 			// Load the .gitignore file
 			gitignore, loadErr := ignore.CompileIgnoreFile(path)
 			if loadErr != nil {
@@ -43,7 +43,7 @@ func NewGitIgnoreMatcher(root string) (*GitIgnoreMatcher, error) {
 				PrintWarning("Could not load .gitignore file at "+path+": "+loadErr.Error(), true)
 				return nil
 			}
-			
+
 			matcher.tree[dir] = gitignore
 		}
 
@@ -55,6 +55,66 @@ func NewGitIgnoreMatcher(root string) (*GitIgnoreMatcher, error) {
 	}
 
 	return matcher, nil
+}
+
+// SimpleMatcher matches paths against a fixed list of patterns.
+type SimpleMatcher struct {
+	root     string
+	matcher  *ignore.GitIgnore
+	patterns []string
+}
+
+// NewSimpleMatcher creates a new SimpleMatcher from a list of patterns.
+func NewSimpleMatcher(root string, patterns []string) (*SimpleMatcher, error) {
+	if len(patterns) == 0 {
+		return &SimpleMatcher{
+			root:     root,
+			matcher:  nil,
+			patterns: patterns,
+		}, nil
+	}
+
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+
+	matcher := ignore.CompileIgnoreLines(patterns...)
+	return &SimpleMatcher{
+		root:     absRoot,
+		matcher:  matcher,
+		patterns: patterns,
+	}, nil
+}
+
+// Match checks if the given path matches any of the patterns.
+func (m *SimpleMatcher) Match(path string) bool {
+	if m == nil || m.matcher == nil {
+		return false
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+
+	// Calculate relative path from root
+	relPath, err := filepath.Rel(m.root, absPath)
+	if err != nil {
+		return false
+	}
+
+	// filepath.Rel returns "." if paths are equal
+	if relPath == "." {
+		return false
+	}
+
+	return m.matcher.MatchesPath(filepath.ToSlash(relPath))
+}
+
+// HasPatterns returns true if the matcher has any patterns configured.
+func (m *SimpleMatcher) HasPatterns() bool {
+	return m != nil && len(m.patterns) > 0
 }
 
 // Match checks if the given path should be ignored according to .gitignore rules.
@@ -80,7 +140,7 @@ func (m *GitIgnoreMatcher) Match(path string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	// Convert to forward slashes for gitignore matching
 	relPathUnix := filepath.ToSlash(relPath)
 

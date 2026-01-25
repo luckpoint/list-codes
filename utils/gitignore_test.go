@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -46,7 +47,7 @@ node_modules/
 func TestGitIgnoreMatcher_Match(t *testing.T) {
 	// Create a temporary directory structure
 	tempDir := t.TempDir()
-	
+
 	// Create subdirectories
 	buildDir := filepath.Join(tempDir, "build")
 	srcDir := filepath.Join(tempDir, "src")
@@ -79,7 +80,7 @@ node_modules/
 		"src/main.go",
 		"node_modules/package.json",
 	}
-	
+
 	for _, testFile := range testFiles {
 		fullPath := filepath.Join(tempDir, testFile)
 		dir := filepath.Dir(fullPath)
@@ -124,7 +125,7 @@ node_modules/
 func TestGitIgnoreMatcher_Match_NestedGitignore(t *testing.T) {
 	// Create a temporary directory structure
 	tempDir := t.TempDir()
-	
+
 	// Create subdirectories
 	subDir := filepath.Join(tempDir, "subdir")
 	err := os.MkdirAll(subDir, 0755)
@@ -179,7 +180,7 @@ func TestGitIgnoreMatcher_Match_NestedGitignore(t *testing.T) {
 
 func TestGitIgnoreMatcher_NilMatcher(t *testing.T) {
 	var matcher *GitIgnoreMatcher
-	
+
 	// Nil matcher should not match anything
 	result := matcher.Match("/some/path")
 	if result != false {
@@ -190,7 +191,7 @@ func TestGitIgnoreMatcher_NilMatcher(t *testing.T) {
 func TestGitIgnoreMatcher_Match_WithIncludePaths(t *testing.T) {
 	// Create a temporary directory
 	tempDir := t.TempDir()
-	
+
 	// Create .gitignore file
 	gitignoreContent := `*.log
 build/
@@ -231,22 +232,33 @@ build/
 		buildFile: {},
 	}
 	excludeNames := make(map[string]struct{})
-	excludePaths := make(map[string]struct{})
+
+	// Create include matcher
+	var includePatterns []string
+	rel, err := filepath.Rel(tempDir, buildFile)
+	if err == nil {
+		rel = filepath.ToSlash(rel)
+		if !strings.HasPrefix(rel, "/") {
+			rel = "/" + rel
+		}
+		includePatterns = append(includePatterns, rel)
+	}
+	includeMatcher, _ := NewSimpleMatcher(tempDir, includePatterns)
 
 	// Test that --include overrides .gitignore rules (Priority 2 > Priority 3)
-	shouldSkip := shouldSkipDir(buildFile, "output.txt", false, includePaths, excludeNames, excludePaths, matcher)
+	shouldSkip := shouldSkipDir(buildFile, "output.txt", false, includePaths, includeMatcher, excludeNames, nil, matcher)
 	if shouldSkip {
 		t.Errorf("File explicitly included via --include should not be skipped even if it matches .gitignore")
 	}
 
 	// Test that files not in --include are still subject to .gitignore rules
-	shouldSkip = shouldSkipDir(logFile, "test.log", false, includePaths, excludeNames, excludePaths, matcher)
+	shouldSkip = shouldSkipDir(logFile, "test.log", false, includePaths, includeMatcher, excludeNames, nil, matcher)
 	if !shouldSkip {
 		t.Errorf("File matching .gitignore and not in --include should be skipped")
 	}
 
 	// Test normal file not in .gitignore and not in --include (should NOT be skipped due to additive behavior)
-	shouldSkip = shouldSkipDir(normalFile, "main.go", false, includePaths, excludeNames, excludePaths, matcher)
+	shouldSkip = shouldSkipDir(normalFile, "main.go", false, includePaths, includeMatcher, excludeNames, nil, matcher)
 	if shouldSkip {
 		t.Errorf("Normal file should NOT be skipped when --include is active (additive behavior)")
 	}
@@ -255,7 +267,7 @@ build/
 func TestGitIgnoreMatcher_ComplexPatterns(t *testing.T) {
 	// Create a temporary directory structure for complex patterns
 	tempDir := t.TempDir()
-	
+
 	// Create complex directory structure
 	dirs := []string{
 		"logs",
@@ -264,14 +276,14 @@ func TestGitIgnoreMatcher_ComplexPatterns(t *testing.T) {
 		"logs/important",
 		"other/a/b",
 	}
-	
+
 	for _, dir := range dirs {
 		err := os.MkdirAll(filepath.Join(tempDir, dir), 0755)
 		if err != nil {
 			t.Fatalf("Failed to create directory %s: %v", dir, err)
 		}
 	}
-	
+
 	// Create test files
 	testFiles := []string{
 		"logs/debug.log",
@@ -284,7 +296,7 @@ func TestGitIgnoreMatcher_ComplexPatterns(t *testing.T) {
 		"important.log",
 		"script.sh",
 	}
-	
+
 	for _, testFile := range testFiles {
 		fullPath := filepath.Join(tempDir, testFile)
 		dir := filepath.Dir(fullPath)
@@ -330,15 +342,15 @@ temp/
 		{filepath.Join(tempDir, "logs", "debug.log"), true, "logs/ should ignore everything in logs directory"},
 		{filepath.Join(tempDir, "logs", "important.log"), false, "!logs/important.log should negate the logs/ rule"},
 		{filepath.Join(tempDir, "logs", "important", "critical.log"), true, "subdirectories of logs/ should still be ignored"},
-		
+
 		// Nested directory wildcards with **
 		{filepath.Join(tempDir, "a", "some", "deep", "b", "file.txt"), true, "a/**/b should match nested b directories"},
 		{filepath.Join(tempDir, "other", "a", "b", "file.txt"), true, "a/**/b should match a/b pattern anywhere"},
-		
+
 		// Directory-only patterns with negations
 		{filepath.Join(tempDir, "temp", "data.tmp"), true, "temp/ should ignore directory"},
 		{filepath.Join(tempDir, "temp", "cache", "file.cache"), false, "!temp/cache/ should negate temp/ for cache subdirectory"},
-		
+
 		// File extension patterns with negations
 		{filepath.Join(tempDir, "important.log"), false, "!important.log should negate *.tmp (even though it doesn't match *.tmp, the negation for important.log applies)"},
 		{filepath.Join(tempDir, "script.sh"), false, "normal files should not be ignored"},

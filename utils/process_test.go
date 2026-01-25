@@ -34,7 +34,7 @@ func TestBuildMarkdownOutput(t *testing.T) {
 			},
 		},
 		{
-			name:                "No dependency files section when empty",
+			name:                 "No dependency files section when empty",
 			directoryStructureMD: "## Project Structure",
 			depFileContents:      map[string][]string{},
 			sourceFileContents:   map[string][]string{"Go": {"### main.go"}},
@@ -126,25 +126,49 @@ func TestProcessSourceFiles(t *testing.T) {
 				createTestFile(t, filepath.Join(dir, path), content)
 			}
 
-			resolvedExcludePaths := make(map[string]struct{})
+			// resolvedExcludePaths is not needed for ProcessSourceFiles anymore
+
+			var excludePatterns []string
+
 			for p := range tt.excludePaths {
 				absPath, err := filepath.Abs(filepath.Join(dir, p))
 				if err != nil {
 					t.Fatalf("Failed to resolve absolute path for exclude: %v", err)
 				}
-				resolvedExcludePaths[absPath] = struct{}{}
+				// resolvedExcludePaths is not needed for ProcessSourceFiles anymore
+
+				rel, err := filepath.Rel(dir, absPath)
+				if err == nil {
+					rel = filepath.ToSlash(rel)
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					excludePatterns = append(excludePatterns, rel)
+				}
 			}
+			excludeMatcher, _ := NewSimpleMatcher(dir, excludePatterns)
 
 			resolvedIncludePaths := make(map[string]struct{})
+			var includePatterns []string
 			for p := range tt.includePaths {
 				absPath, err := filepath.Abs(filepath.Join(dir, p))
 				if err != nil {
 					t.Fatalf("Failed to resolve absolute path for include: %v", err)
 				}
 				resolvedIncludePaths[absPath] = struct{}{}
-			}
 
-			actualOutput := ProcessSourceFiles(dir, tt.maxDepth, resolvedIncludePaths, tt.excludeNames, resolvedExcludePaths, tt.debugMode, false, nil)
+				rel, err := filepath.Rel(dir, absPath)
+				if err == nil {
+					rel = filepath.ToSlash(rel)
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					includePatterns = append(includePatterns, rel)
+				}
+			}
+			includeMatcher, _ := NewSimpleMatcher(dir, includePatterns)
+
+			actualOutput := ProcessSourceFiles(dir, tt.maxDepth, resolvedIncludePaths, includeMatcher, tt.excludeNames, excludeMatcher, tt.debugMode, false, nil)
 			actualOutput = strings.ReplaceAll(actualOutput, "\n", "\n")
 
 			for _, expected := range tt.expectedContains {
@@ -163,19 +187,19 @@ func TestProcessSourceFiles(t *testing.T) {
 
 func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	// Create test files structure
 	testFiles := map[string]string{
-		"main.go":           "package main\n\nfunc main() {\n\tprintln(\"Hello World\")\n}",
-		"service.go":        "package main\n\nfunc Service() {\n\t// service logic\n}",
-		"main_test.go":      "package main\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {\n\t// test main\n}",
-		"service_test.go":   "package main\n\nimport \"testing\"\n\nfunc TestService(t *testing.T) {\n\t// test service\n}", 
-		"utils/helper.go":   "package utils\n\nfunc Helper() {\n\t// helper logic\n}",
+		"main.go":              "package main\n\nfunc main() {\n\tprintln(\"Hello World\")\n}",
+		"service.go":           "package main\n\nfunc Service() {\n\t// service logic\n}",
+		"main_test.go":         "package main\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {\n\t// test main\n}",
+		"service_test.go":      "package main\n\nimport \"testing\"\n\nfunc TestService(t *testing.T) {\n\t// test service\n}",
+		"utils/helper.go":      "package utils\n\nfunc Helper() {\n\t// helper logic\n}",
 		"utils/helper_test.go": "package utils\n\nimport \"testing\"\n\nfunc TestHelper(t *testing.T) {\n\t// test helper\n}",
-		"tests/test_setup.py": "# test setup\ndef setup():\n    pass",
-		"go.mod":            "module test\n\ngo 1.19",
+		"tests/test_setup.py":  "# test setup\ndef setup():\n    pass",
+		"go.mod":               "module test\n\ngo 1.19",
 	}
-	
+
 	for filePath, content := range testFiles {
 		fullPath := filepath.Join(tempDir, filePath)
 		err := os.MkdirAll(filepath.Dir(fullPath), 0755)
@@ -187,7 +211,7 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 			t.Fatalf("Failed to create file %s: %v", filePath, err)
 		}
 	}
-	
+
 	tests := []struct {
 		name                string
 		includeTests        bool
@@ -198,15 +222,15 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 			name:         "exclude tests (default behavior)",
 			includeTests: false,
 			expectedContains: []string{
-				"## Project Structure", 
+				"## Project Structure",
 				"## Source Code Size Check",
-				"main.go", 
-				"service.go", 
+				"main.go",
+				"service.go",
 				"helper.go",
 			},
 			expectedNotContains: []string{
-				"main_test.go", 
-				"service_test.go", 
+				"main_test.go",
+				"service_test.go",
 				"helper_test.go",
 				"test_setup.py",
 			},
@@ -215,34 +239,33 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 			name:         "include tests",
 			includeTests: true,
 			expectedContains: []string{
-				"## Project Structure", 
+				"## Project Structure",
 				"## Source Code Size Check",
-				"main.go", 
-				"service.go", 
+				"main.go",
+				"service.go",
 				"helper.go",
-				"main_test.go", 
-				"service_test.go", 
+				"main_test.go",
+				"service_test.go",
 				"helper_test.go",
 				"test_setup.py",
 			},
 			expectedNotContains: []string{},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			includePaths := make(map[string]struct{})
 			excludeNames := make(map[string]struct{})
-			excludePaths := make(map[string]struct{})
-			
-			output := ProcessSourceFiles(tempDir, 10, includePaths, excludeNames, excludePaths, false, tt.includeTests, nil)
-			
+
+			output := ProcessSourceFiles(tempDir, 10, includePaths, nil, excludeNames, nil, false, tt.includeTests, nil)
+
 			for _, expected := range tt.expectedContains {
 				if !strings.Contains(output, expected) {
 					t.Errorf("Expected ProcessSourceFiles output to contain %q when includeTests=%v, but it did not\nOutput:\n%s", expected, tt.includeTests, output)
 				}
 			}
-			
+
 			for _, unexpected := range tt.expectedNotContains {
 				if strings.Contains(output, unexpected) {
 					t.Errorf("Expected ProcessSourceFiles output not to contain %q when includeTests=%v, but it did\nOutput:\n%s", unexpected, tt.includeTests, output)
@@ -318,7 +341,7 @@ func TestBuildMarkdownOutputDeep(t *testing.T) {
 				"## Source Code Size Check",
 				"### Go",
 				"### main.go",
-				"### Python", 
+				"### Python",
 				"### app.py",
 				"### JavaScript",
 				"### script.js",
@@ -366,14 +389,14 @@ func TestBuildMarkdownOutputDeep(t *testing.T) {
 			if tt.checkSectionOrder {
 				sizeCheckIndex := strings.Index(output, "## Source Code Size Check")
 				projectStructureIndex := strings.Index(output, "## Project Structure")
-				
+
 				if sizeCheckIndex == -1 {
 					t.Errorf("Expected to find '## Source Code Size Check' section in output")
 				}
 				if projectStructureIndex == -1 {
 					t.Errorf("Expected to find '## Project Structure' section in output")
 				}
-				
+
 				if sizeCheckIndex != -1 && projectStructureIndex != -1 && sizeCheckIndex >= projectStructureIndex {
 					t.Errorf("Expected 'Source Code Size Check' section to appear before 'Project Structure' section. Size Check at %d, Project Structure at %d", sizeCheckIndex, projectStructureIndex)
 				}

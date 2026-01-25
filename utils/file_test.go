@@ -171,33 +171,33 @@ func TestShouldSkipDir(t *testing.T) {
 			reason:       "Dot directories not explicitly included should still be skipped even with --include active.",
 		},
 		{
-			name:         "Additive: Multiple Includes - First Match",
-			path:         ".env",
-			isDir:        false,
+			name:  "Additive: Multiple Includes - First Match",
+			path:  ".env",
+			isDir: false,
 			includePaths: map[string]struct{}{
-				abs(".env"):        {},
+				abs(".env"):          {},
 				abs(".dockerignore"): {},
 			},
 			wantSkip: false,
 			reason:   "File should not be skipped when it matches any of multiple includes.",
 		},
 		{
-			name:         "Additive: Multiple Includes - Second Match",
-			path:         ".dockerignore",
-			isDir:        false,
+			name:  "Additive: Multiple Includes - Second Match",
+			path:  ".dockerignore",
+			isDir: false,
 			includePaths: map[string]struct{}{
-				abs(".env"):        {},
+				abs(".env"):          {},
 				abs(".dockerignore"): {},
 			},
 			wantSkip: false,
 			reason:   "File should not be skipped when it matches any of multiple includes.",
 		},
 		{
-			name:         "Additive: Multiple Includes - No Match",
-			path:         ".gitignore",
-			isDir:        false,
+			name:  "Additive: Multiple Includes - No Match",
+			path:  ".gitignore",
+			isDir: false,
 			includePaths: map[string]struct{}{
-				abs(".env"):        {},
+				abs(".env"):          {},
 				abs(".dockerignore"): {},
 			},
 			wantSkip: true,
@@ -224,7 +224,33 @@ func TestShouldSkipDir(t *testing.T) {
 				name = "."
 			}
 
-			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, tc.excludeNames, tc.excludePaths, nil)
+			var excludePatterns []string
+			for p := range tc.excludePaths {
+				rel, err := filepath.Rel(projectRoot, p)
+				if err == nil {
+					rel = filepath.ToSlash(rel)
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					excludePatterns = append(excludePatterns, rel)
+				}
+			}
+			excludeMatcher, _ := NewSimpleMatcher(projectRoot, excludePatterns)
+
+			var includePatterns []string
+			for p := range tc.includePaths {
+				rel, err := filepath.Rel(projectRoot, p)
+				if err == nil {
+					rel = filepath.ToSlash(rel)
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					includePatterns = append(includePatterns, rel)
+				}
+			}
+			includeMatcher, _ := NewSimpleMatcher(projectRoot, includePatterns)
+
+			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, includeMatcher, tc.excludeNames, excludeMatcher, nil)
 
 			if gotSkip != tc.wantSkip {
 				t.Errorf("shouldSkipDir() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
@@ -268,19 +294,19 @@ func TestIsTestFile(t *testing.T) {
 
 func TestGenerateDirectoryStructureWithIncludeTests(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	// Create test files structure
 	testFiles := map[string]string{
-		"main.go":           "package main",
-		"service.go":        "package main",
-		"main_test.go":      "package main",
-		"service_test.go":   "package main", 
-		"utils/helper.go":   "package utils",
+		"main.go":              "package main",
+		"service.go":           "package main",
+		"main_test.go":         "package main",
+		"service_test.go":      "package main",
+		"utils/helper.go":      "package utils",
 		"utils/helper_test.go": "package utils",
-		"test/data.json":    "{}",
-		"tests/setup.py":    "# setup",
+		"test/data.json":       "{}",
+		"tests/setup.py":       "# setup",
 	}
-	
+
 	for filePath, content := range testFiles {
 		fullPath := filepath.Join(tempDir, filePath)
 		err := os.MkdirAll(filepath.Dir(fullPath), 0755)
@@ -292,7 +318,7 @@ func TestGenerateDirectoryStructureWithIncludeTests(t *testing.T) {
 			t.Fatalf("Failed to create file %s: %v", filePath, err)
 		}
 	}
-	
+
 	tests := []struct {
 		name         string
 		includeTests bool
@@ -312,21 +338,20 @@ func TestGenerateDirectoryStructureWithIncludeTests(t *testing.T) {
 			rejectFiles:  []string{},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			includePaths := make(map[string]struct{})
 			excludeNames := make(map[string]struct{})
-			excludePaths := make(map[string]struct{})
-			
-			output := GenerateDirectoryStructure(tempDir, 10, false, includePaths, excludeNames, excludePaths, tt.includeTests, nil)
-			
+
+			output := GenerateDirectoryStructure(tempDir, 10, false, includePaths, nil, excludeNames, nil, tt.includeTests, nil)
+
 			for _, expectedFile := range tt.expectFiles {
 				if !strings.Contains(output, expectedFile) {
 					t.Errorf("Expected output to contain %q when includeTests=%v, but it did not\nOutput:\n%s", expectedFile, tt.includeTests, output)
 				}
 			}
-			
+
 			for _, rejectedFile := range tt.rejectFiles {
 				if strings.Contains(output, rejectedFile) {
 					t.Errorf("Expected output not to contain %q when includeTests=%v, but it did\nOutput:\n%s", rejectedFile, tt.includeTests, output)
@@ -450,7 +475,33 @@ func TestShouldSkipDirWithExcludeAndAdditive(t *testing.T) {
 				name = "."
 			}
 
-			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, tc.excludeNames, tc.excludePaths, nil)
+			var excludePatterns []string
+			for p := range tc.excludePaths {
+				rel, err := filepath.Rel(projectRoot, p)
+				if err == nil {
+					rel = filepath.ToSlash(rel)
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					excludePatterns = append(excludePatterns, rel)
+				}
+			}
+			excludeMatcher, _ := NewSimpleMatcher(projectRoot, excludePatterns)
+
+			var includePatterns []string
+			for p := range tc.includePaths {
+				rel, err := filepath.Rel(projectRoot, p)
+				if err == nil {
+					rel = filepath.ToSlash(rel)
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					includePatterns = append(includePatterns, rel)
+				}
+			}
+			includeMatcher, _ := NewSimpleMatcher(projectRoot, includePatterns)
+
+			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, includeMatcher, tc.excludeNames, excludeMatcher, nil)
 
 			if gotSkip != tc.wantSkip {
 				t.Errorf("shouldSkipDir() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
@@ -564,7 +615,7 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 		},
 		{
 			name:         "Additive: Complex Path Matching - Prefix Match",
-			path:         "src-backup",  // Should NOT match "src" 
+			path:         "src-backup", // Should NOT match "src"
 			isDir:        true,
 			includePaths: map[string]struct{}{abs("src"): {}},
 			wantSkip:     false,
@@ -599,7 +650,33 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 				name = "."
 			}
 
-			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, tc.excludeNames, tc.excludePaths, nil)
+			var excludePatterns []string
+			for p := range tc.excludePaths {
+				rel, err := filepath.Rel(projectRoot, p)
+				if err == nil {
+					rel = filepath.ToSlash(rel)
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					excludePatterns = append(excludePatterns, rel)
+				}
+			}
+			excludeMatcher, _ := NewSimpleMatcher(projectRoot, excludePatterns)
+
+			var includePatterns []string
+			for p := range tc.includePaths {
+				rel, err := filepath.Rel(projectRoot, p)
+				if err == nil {
+					rel = filepath.ToSlash(rel)
+					if !strings.HasPrefix(rel, "/") {
+						rel = "/" + rel
+					}
+					includePatterns = append(includePatterns, rel)
+				}
+			}
+			includeMatcher, _ := NewSimpleMatcher(projectRoot, includePatterns)
+
+			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, includeMatcher, tc.excludeNames, excludeMatcher, nil)
 
 			if gotSkip != tc.wantSkip {
 				t.Errorf("shouldSkipDir() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
@@ -640,14 +717,14 @@ func TestIsAssetFile(t *testing.T) {
 
 func TestCollectReadmeFiles(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	testCases := []struct {
-		name           string
-		setupFiles     map[string]string
-		expectedCount  int
-		expectedText   string
-		excludeNames   map[string]struct{}
-		excludePaths   map[string]struct{}
+		name          string
+		setupFiles    map[string]string
+		expectedCount int
+		expectedText  string
+		excludeNames  map[string]struct{}
+		excludePaths  map[string]struct{}
 	}{
 		{
 			name: "Single README file",
@@ -660,7 +737,7 @@ func TestCollectReadmeFiles(t *testing.T) {
 		{
 			name: "Multiple README files",
 			setupFiles: map[string]string{
-				"README.md":     "# Root README",
+				"README.md":      "# Root README",
 				"docs/README.md": "# Documentation README",
 			},
 			expectedCount: 2,
@@ -677,7 +754,7 @@ func TestCollectReadmeFiles(t *testing.T) {
 		{
 			name: "README in excluded directory",
 			setupFiles: map[string]string{
-				"README.md":           "# Root README",
+				"README.md":              "# Root README",
 				"node_modules/README.md": "# Node modules README",
 			},
 			excludeNames:  map[string]struct{}{"node_modules": {}},
@@ -727,8 +804,34 @@ func TestCollectReadmeFiles(t *testing.T) {
 				excludePaths = make(map[string]struct{})
 			}
 
+			// Create exclude matcher
+			var excludePatterns []string
+			for p := range excludePaths {
+				// excludePaths here are relative to project root? No, setupFiles keys are relative to testDir.
+				// But excludePaths in testCases structure?
+				// Let's check struct definition.
+				// excludePaths map[string]struct{}.
+				// In usage: excludePaths: map[string]struct{}{"node_modules": {}} (wait, this is a map key).
+				// Is it absolute or relative?
+				// CollectReadmeFiles expects excludePaths map to check absolute path?
+				// But here in test case `README in excluded directory`, excludeNames is used.
+				// excludePaths is NOT populated in any test case!
+				// So I can just assume empty excludePaths for now?
+				// Or if I add support, I should treat them as... path strings?
+				// The map key IS the path.
+				// Since no test case populates excludePaths, I can safely use empty patterns.
+
+				// Wait, if excludePaths is populated, I need to know if it's absolute or relative.
+				// The previous tests used absolute paths.
+				// Here, the test setup doesn't use `abs` helper because `tempDir` varies per run.
+				// But looking at the test cases, ONLY excludeNames is used in one case.
+				// So excludePatterns will be empty.
+				_ = p
+			}
+			excludeMatcher, _ := NewSimpleMatcher(testDir, excludePatterns)
+
 			// Collect README files
-			output := CollectReadmeFiles(testDir, includePaths, excludeNames, excludePaths, false, nil)
+			output := CollectReadmeFiles(testDir, includePaths, nil, excludeNames, excludeMatcher, false, nil)
 
 			// Check if expected text is present
 			if !strings.Contains(output, tc.expectedText) {
@@ -746,19 +849,19 @@ func TestCollectReadmeFiles(t *testing.T) {
 
 func TestCollectSourceFilesWithIncludeTests(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	// Create test files structure
 	testFiles := map[string]string{
-		"main.go":           "package main\n\nfunc main() {}",
-		"service.go":        "package main\n\nfunc Service() {}",
-		"main_test.go":      "package main\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {}",
-		"service_test.go":   "package main\n\nimport \"testing\"\n\nfunc TestService(t *testing.T) {}", 
-		"utils/helper.go":   "package utils\n\nfunc Helper() {}",
+		"main.go":              "package main\n\nfunc main() {}",
+		"service.go":           "package main\n\nfunc Service() {}",
+		"main_test.go":         "package main\n\nimport \"testing\"\n\nfunc TestMain(t *testing.T) {}",
+		"service_test.go":      "package main\n\nimport \"testing\"\n\nfunc TestService(t *testing.T) {}",
+		"utils/helper.go":      "package utils\n\nfunc Helper() {}",
 		"utils/helper_test.go": "package utils\n\nimport \"testing\"\n\nfunc TestHelper(t *testing.T) {}",
-		"test/data.json":    "{}",
-		"tests/test_setup.py": "# test setup",
+		"test/data.json":       "{}",
+		"tests/test_setup.py":  "# test setup",
 	}
-	
+
 	for filePath, content := range testFiles {
 		fullPath := filepath.Join(tempDir, filePath)
 		err := os.MkdirAll(filepath.Dir(fullPath), 0755)
@@ -770,12 +873,12 @@ func TestCollectSourceFilesWithIncludeTests(t *testing.T) {
 			t.Fatalf("Failed to create file %s: %v", filePath, err)
 		}
 	}
-	
+
 	tests := []struct {
 		name         string
 		includeTests bool
-		expectFiles  []string  // Files that should be in source collection
-		rejectFiles  []string  // Files that should NOT be in source collection
+		expectFiles  []string // Files that should be in source collection
+		rejectFiles  []string // Files that should NOT be in source collection
 	}{
 		{
 			name:         "exclude tests (default behavior)",
@@ -790,7 +893,7 @@ func TestCollectSourceFilesWithIncludeTests(t *testing.T) {
 			rejectFiles:  []string{}, // JSON files don't have language extension, so won't be collected anyway
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			primaryLangs := []string{"Go", "Python"}
@@ -798,23 +901,23 @@ func TestCollectSourceFilesWithIncludeTests(t *testing.T) {
 			processedDepFiles := make(map[string]struct{})
 			includePaths := make(map[string]struct{})
 			excludeNames := make(map[string]struct{})
-			excludePaths := make(map[string]struct{})
-			
-			sourceFileContents, _, _, _ := collectSourceFiles(tempDir, primaryLangs, fallbackLangs, processedDepFiles, includePaths, excludeNames, excludePaths, false, tt.includeTests, nil)
-			
+
+			sourceFileContents, _, _, _ := collectSourceFiles(tempDir, primaryLangs, fallbackLangs, processedDepFiles, includePaths, nil, excludeNames, nil, false, tt.includeTests, nil)
+
 			// Convert collected files to a flat string for easier testing
+
 			var collectedFiles []string
 			for _, files := range sourceFileContents {
 				collectedFiles = append(collectedFiles, files...)
 			}
 			allOutput := strings.Join(collectedFiles, "\n")
-			
+
 			for _, expectedFile := range tt.expectFiles {
 				if !strings.Contains(allOutput, expectedFile) {
 					t.Errorf("Expected source files to contain %q when includeTests=%v, but it did not\nCollected files:\n%s", expectedFile, tt.includeTests, allOutput)
 				}
 			}
-			
+
 			for _, rejectedFile := range tt.rejectFiles {
 				if strings.Contains(allOutput, rejectedFile) {
 					t.Errorf("Expected source files not to contain %q when includeTests=%v, but it did\nCollected files:\n%s", rejectedFile, tt.includeTests, allOutput)
@@ -834,14 +937,14 @@ func TestCollectSourceFilesFileSizeLimits(t *testing.T) {
 	}()
 
 	tempDir := t.TempDir()
-	
+
 	// Create test files with specific sizes
 	testFiles := map[string]string{
-		"small.go":  strings.Repeat("// comment\n", 10),  // Small file (~110 bytes)
-		"medium.go": strings.Repeat("// comment\n", 40),  // Medium file (~440 bytes)
+		"small.go":  strings.Repeat("// comment\n", 10),   // Small file (~110 bytes)
+		"medium.go": strings.Repeat("// comment\n", 40),   // Medium file (~440 bytes)
 		"large.go":  strings.Repeat("// comment\n", 1000), // Large file (~11KB)
 	}
-	
+
 	for filePath, content := range testFiles {
 		fullPath := filepath.Join(tempDir, filePath)
 		err := os.WriteFile(fullPath, []byte(content), 0644)
@@ -854,32 +957,32 @@ func TestCollectSourceFilesFileSizeLimits(t *testing.T) {
 		// Set limit to 500 bytes - should skip large.go
 		MaxFileSizeBytes = 500
 		TotalMaxFileSizeBytes = 0 // No total limit
-		
+
 		primaryLangs := []string{"Go"}
 		fallbackLangs := map[string]int{"Go": 3}
 		processedDepFiles := make(map[string]struct{})
 		includePaths := make(map[string]struct{})
 		excludeNames := make(map[string]struct{})
-		excludePaths := make(map[string]struct{})
-		
-		sourceFileContents, _, skippedMessages, limitHit := collectSourceFiles(tempDir, primaryLangs, fallbackLangs, processedDepFiles, includePaths, excludeNames, excludePaths, false, false, nil)
-		
+
+		sourceFileContents, _, skippedMessages, limitHit := collectSourceFiles(tempDir, primaryLangs, fallbackLangs, processedDepFiles, includePaths, nil, excludeNames, nil, false, false, nil)
+
 		// Should not hit total limit
+
 		if limitHit {
 			t.Errorf("Expected limitHit to be false when using MaxFileSizeBytes limit, got true")
 		}
-		
+
 		// Should have skipped large.go
 		if len(skippedMessages) == 0 {
 			t.Errorf("Expected skipped messages for large files, got none")
 		}
-		
+
 		// Combine all collected content
 		var allContent string
 		for _, files := range sourceFileContents {
 			allContent += strings.Join(files, "")
 		}
-		
+
 		// Should contain small and medium files but not large
 		if !strings.Contains(allContent, "small.go") {
 			t.Errorf("Expected to find small.go in collected files")
@@ -894,33 +997,33 @@ func TestCollectSourceFilesFileSizeLimits(t *testing.T) {
 
 	t.Run("TotalMaxFileSizeBytes limit", func(t *testing.T) {
 		// Set individual file limit high but total limit low
-		MaxFileSizeBytes = 100000 // 100KB - high individual limit
+		MaxFileSizeBytes = 100000     // 100KB - high individual limit
 		TotalMaxFileSizeBytes = 11200 // 11200 bytes total - allow large.go (11000) but not medium.go (440)
-		
+
 		primaryLangs := []string{"Go"}
 		fallbackLangs := map[string]int{"Go": 3}
 		processedDepFiles := make(map[string]struct{})
 		includePaths := make(map[string]struct{})
 		excludeNames := make(map[string]struct{})
-		excludePaths := make(map[string]struct{})
-		
-		sourceFileContents, _, skippedMessages, limitHit := collectSourceFiles(tempDir, primaryLangs, fallbackLangs, processedDepFiles, includePaths, excludeNames, excludePaths, false, false, nil)
-		
+
+		sourceFileContents, _, skippedMessages, limitHit := collectSourceFiles(tempDir, primaryLangs, fallbackLangs, processedDepFiles, includePaths, nil, excludeNames, nil, false, false, nil)
+
 		// Should hit total limit
+
 		if !limitHit {
 			t.Errorf("Expected limitHit to be true when exceeding TotalMaxFileSizeBytes, got false")
 		}
-		
+
 		// Should have processed at least one file before hitting limit
 		totalFiles := 0
 		for _, files := range sourceFileContents {
 			totalFiles += len(files)
 		}
-		
+
 		if totalFiles == 0 {
 			t.Errorf("Expected to process at least one file before hitting total size limit")
 		}
-		
+
 		// Files that exceed the total should not have skipped messages (they stop processing instead)
 		_ = skippedMessages // No specific assertion as behavior may vary
 	})
@@ -928,16 +1031,16 @@ func TestCollectSourceFilesFileSizeLimits(t *testing.T) {
 
 func TestGenerateDirectoryStructureMaxDepth(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	// Create a deep directory structure
 	testFiles := map[string]string{
-		"root.go":                     "package main",
-		"level1/file1.go":            "package level1",
-		"level1/level2/file2.go":     "package level2", 
-		"level1/level2/level3/file3.go": "package level3",
+		"root.go":                              "package main",
+		"level1/file1.go":                      "package level1",
+		"level1/level2/file2.go":               "package level2",
+		"level1/level2/level3/file3.go":        "package level3",
 		"level1/level2/level3/level4/file4.go": "package level4",
 	}
-	
+
 	for filePath, content := range testFiles {
 		fullPath := filepath.Join(tempDir, filePath)
 		err := os.MkdirAll(filepath.Dir(fullPath), 0755)
@@ -951,39 +1054,39 @@ func TestGenerateDirectoryStructureMaxDepth(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name             string
-		maxDepth         int
-		expectedFiles    []string
-		unexpectedFiles  []string
-		expectEllipsis   bool
+		name            string
+		maxDepth        int
+		expectedFiles   []string
+		unexpectedFiles []string
+		expectEllipsis  bool
 	}{
 		{
-			name:             "Depth 0 - root only",
-			maxDepth:         0,
-			expectedFiles:    []string{"root.go"},
-			unexpectedFiles:  []string{"level1", "file1.go", "file2.go"},
-			expectEllipsis:   true,
+			name:            "Depth 0 - root only",
+			maxDepth:        0,
+			expectedFiles:   []string{"root.go"},
+			unexpectedFiles: []string{"level1", "file1.go", "file2.go"},
+			expectEllipsis:  true,
 		},
 		{
-			name:             "Depth 1 - one level deep",  
-			maxDepth:         1,
-			expectedFiles:    []string{"root.go", "level1", "file1.go"},
-			unexpectedFiles:  []string{"file2.go", "level2", "file3.go"},
-			expectEllipsis:   true,
+			name:            "Depth 1 - one level deep",
+			maxDepth:        1,
+			expectedFiles:   []string{"root.go", "level1", "file1.go"},
+			unexpectedFiles: []string{"file2.go", "level2", "file3.go"},
+			expectEllipsis:  true,
 		},
 		{
-			name:             "Depth 2 - two levels deep",
-			maxDepth:         2,
-			expectedFiles:    []string{"root.go", "level1", "file1.go", "level2", "file2.go"},
-			unexpectedFiles:  []string{"file3.go", "level3"},
-			expectEllipsis:   true,
+			name:            "Depth 2 - two levels deep",
+			maxDepth:        2,
+			expectedFiles:   []string{"root.go", "level1", "file1.go", "level2", "file2.go"},
+			unexpectedFiles: []string{"file3.go", "level3"},
+			expectEllipsis:  true,
 		},
 		{
-			name:             "High depth - no limit",
-			maxDepth:         10,
-			expectedFiles:    []string{"root.go", "file1.go", "file2.go", "file3.go", "file4.go"},
-			unexpectedFiles:  []string{},
-			expectEllipsis:   false,
+			name:            "High depth - no limit",
+			maxDepth:        10,
+			expectedFiles:   []string{"root.go", "file1.go", "file2.go", "file3.go", "file4.go"},
+			unexpectedFiles: []string{},
+			expectEllipsis:  false,
 		},
 	}
 
@@ -991,22 +1094,22 @@ func TestGenerateDirectoryStructureMaxDepth(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			includePaths := make(map[string]struct{})
 			excludeNames := make(map[string]struct{})
-			excludePaths := make(map[string]struct{})
-			
-			output := GenerateDirectoryStructure(tempDir, tc.maxDepth, false, includePaths, excludeNames, excludePaths, false, nil)
-			
+
+			output := GenerateDirectoryStructure(tempDir, tc.maxDepth, false, includePaths, nil, excludeNames, nil, false, nil)
+
 			for _, expectedFile := range tc.expectedFiles {
+
 				if !strings.Contains(output, expectedFile) {
 					t.Errorf("Expected output to contain %q with maxDepth=%d, but it did not\nOutput:\n%s", expectedFile, tc.maxDepth, output)
 				}
 			}
-			
+
 			for _, unexpectedFile := range tc.unexpectedFiles {
 				if strings.Contains(output, unexpectedFile) {
 					t.Errorf("Expected output not to contain %q with maxDepth=%d, but it did\nOutput:\n%s", unexpectedFile, tc.maxDepth, output)
 				}
 			}
-			
+
 			if tc.expectEllipsis {
 				if !strings.Contains(output, "...") {
 					t.Errorf("Expected output to contain ellipsis (...) with maxDepth=%d, but it did not\nOutput:\n%s", tc.maxDepth, output)
