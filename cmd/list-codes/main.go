@@ -33,16 +33,16 @@ func init() {
 	langSet := parseLanguageFlag()
 
 	// Initialize i18n with debug mode check
-	debugMode := false
+	earlyDebugMode := false
 	for _, arg := range os.Args {
 		if arg == "--debug" {
-			debugMode = true
+			earlyDebugMode = true
 			break
 		}
 	}
 
 	if !langSet {
-		utils.InitI18n(debugMode)
+		utils.InitI18n(earlyDebugMode)
 	}
 
 	// Set help messages based on current language
@@ -113,9 +113,15 @@ var rootCmd = &cobra.Command{
 		// Process excludes
 		var excludePatterns []string
 		for _, p := range excludes {
-			// If it contains glob characters, use it as a raw pattern
+			// If it contains glob characters, handle anchoring
 			if strings.ContainsAny(p, "*?[]") {
-				excludePatterns = append(excludePatterns, filepath.ToSlash(p))
+				pattern := filepath.ToSlash(p)
+				// If it doesn't contain "**" and doesn't start with "/", anchor it to root
+				// This follows the requirement: "*.md" matches root only, "**/*.md" matches recursively.
+				if !strings.Contains(pattern, "**") && !strings.HasPrefix(pattern, "/") {
+					pattern = "/" + pattern
+				}
+				excludePatterns = append(excludePatterns, pattern)
 				continue
 			}
 
@@ -155,9 +161,14 @@ var rootCmd = &cobra.Command{
 		var includePatterns []string
 
 		for _, p := range includes {
-			// If it contains glob characters, use it as a raw pattern
+			// If it contains glob characters, handle anchoring
 			if strings.ContainsAny(p, "*?[]") {
-				includePatterns = append(includePatterns, filepath.ToSlash(p))
+				pattern := filepath.ToSlash(p)
+				// If it doesn't contain "**" and doesn't start with "/", anchor it to root
+				if !strings.Contains(pattern, "**") && !strings.HasPrefix(pattern, "/") {
+					pattern = "/" + pattern
+				}
+				includePatterns = append(includePatterns, pattern)
 				continue
 			}
 
