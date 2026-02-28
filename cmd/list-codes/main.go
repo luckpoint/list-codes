@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/luckpoint/list-codes/utils"
 	"github.com/spf13/cobra"
@@ -28,6 +29,8 @@ var (
 	maxTotalSizeStr string
 	noGitignore     bool
 )
+
+var doubleStarRegexpCache sync.Map
 
 func init() {
 	// Parse --lang flag early before Cobra processes it
@@ -294,7 +297,7 @@ func resolvePathPatterns(baseFolder string, patterns []string, flagName string, 
 		}
 
 		for _, p := range expanded {
-			absPath, err := filepath.Abs(p)
+			absPath, err := toAbsCleanPath(p)
 			if err != nil {
 				utils.PrintWarning(fmt.Sprintf("Could not resolve absolute path for %s '%s': %v", flagName, p, err), debug)
 				continue
@@ -325,12 +328,12 @@ func expandPathPattern(pattern string) ([]string, error) {
 	}
 
 	searchRoot := patternSearchRoot(cleanPattern)
-	searchRootAbs, err := filepath.Abs(searchRoot)
+	searchRootAbs, err := toAbsCleanPath(searchRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	re, err := regexp.Compile(doubleStarPatternToRegexp(filepath.ToSlash(cleanPattern)))
+	re, err := getCachedDoubleStarRegexp(cleanPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -355,6 +358,29 @@ func expandPathPattern(pattern string) ([]string, error) {
 		return []string{cleanPattern}, nil
 	}
 	return matches, nil
+}
+
+func toAbsCleanPath(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path), nil
+	}
+	return filepath.Abs(path)
+}
+
+func getCachedDoubleStarRegexp(pattern string) (*regexp.Regexp, error) {
+	normalized := filepath.ToSlash(filepath.Clean(pattern))
+	if cached, ok := doubleStarRegexpCache.Load(normalized); ok {
+		return cached.(*regexp.Regexp), nil
+	}
+
+	re, err := regexp.Compile(doubleStarPatternToRegexp(normalized))
+	if err != nil {
+		return nil, err
+	}
+	if cached, loaded := doubleStarRegexpCache.LoadOrStore(normalized, re); loaded {
+		return cached.(*regexp.Regexp), nil
+	}
+	return re, nil
 }
 
 func hasGlobMeta(pattern string) bool {

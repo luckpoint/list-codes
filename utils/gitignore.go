@@ -3,21 +3,23 @@ package utils
 import (
 	"os"
 	"path/filepath"
-	"strings"
+	"sync"
 
 	"github.com/sabhiram/go-gitignore"
 )
 
 // GitIgnoreMatcher provides functionality to match paths against .gitignore rules
 type GitIgnoreMatcher struct {
-	root string
-	tree map[string]*ignore.GitIgnore // key = directory absolute path
+	root       string
+	tree       map[string]*ignore.GitIgnore // key = directory absolute path
+	loadedDirs map[string]struct{}          // absolute dirs already checked
+	mu         sync.RWMutex
 }
 
-// NewGitIgnoreMatcher creates a new GitIgnoreMatcher by walking the repository
-// and loading all .gitignore files found in the directory hierarchy.
+// NewGitIgnoreMatcher creates a matcher and eagerly checks only the root
+// directory. Nested .gitignore files are loaded lazily on Match calls.
 func NewGitIgnoreMatcher(root string) (*GitIgnoreMatcher, error) {
-	absRoot, err := filepath.Abs(root)
+	absRoot, err := normalizeAbsolutePath(root)
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +55,7 @@ func NewGitIgnoreMatcher(root string) (*GitIgnoreMatcher, error) {
 	if err != nil {
 		return nil, err
 	}
+	matcher.loadGitIgnoreForDir(absRoot)
 
 	return matcher, nil
 }
@@ -121,17 +124,27 @@ func (m *SimpleMatcher) HasPatterns() bool {
 // It returns true if the path should be ignored, false otherwise.
 // The function applies Git's precedence rules: closer .gitignore files take precedence.
 func (m *GitIgnoreMatcher) Match(path string) bool {
+	isDir := false
+	if info, err := os.Stat(path); err == nil {
+		isDir = info.IsDir()
+	}
+	return m.MatchWithType(path, isDir)
+}
+
+// MatchWithType is a faster variant of Match when caller already knows whether
+// the path is a directory.
+func (m *GitIgnoreMatcher) MatchWithType(path string, isDir bool) bool {
 	if m == nil {
 		return false
 	}
 
-	absPath, err := filepath.Abs(path)
+	absPath, err := normalizeAbsolutePath(path)
 	if err != nil {
 		return false
 	}
 
 	// Make sure the path is within our root
-	if !strings.HasPrefix(absPath, m.root) {
+	if !pathWithinRoot(m.root, absPath) {
 		return false
 	}
 
@@ -146,32 +159,78 @@ func (m *GitIgnoreMatcher) Match(path string) bool {
 
 	// Start from the file's directory and walk up to root
 	currentDir := absPath
-	if info, err := os.Stat(absPath); err == nil && !info.IsDir() {
+	if !isDir {
 		currentDir = filepath.Dir(absPath)
 	}
 
-	// Collect all applicable .gitignore matchers from closest to root
-	var matchers []*ignore.GitIgnore
+	// Collect all applicable .gitignore matchers from current to root.
+	var dirs []string
+	dir := currentDir
 	for {
-		if gitignore, exists := m.tree[currentDir]; exists {
-			matchers = append(matchers, gitignore)
-		}
-
-		// Move up one directory
-		parent := filepath.Dir(currentDir)
-		if parent == currentDir || !strings.HasPrefix(parent, m.root) {
+		dirs = append(dirs, dir)
+		if dir == m.root {
 			break
 		}
-		currentDir = parent
+		parent := filepath.Dir(dir)
+		if parent == dir || !pathWithinRoot(m.root, parent) {
+			break
+		}
+		dir = parent
+	}
+	for _, d := range dirs {
+		m.loadGitIgnoreForDir(d)
 	}
 
-	// Apply matchers in reverse order (closest first, which matches Git's behavior)
-	// If any matcher says to ignore, we ignore (unless a closer one says not to)
-	for i := len(matchers) - 1; i >= 0; i-- {
-		if matchers[i].MatchesPath(relPathUnix) {
+	// Apply matchers from root to current directory.
+	var matchers []*ignore.GitIgnore
+	m.mu.RLock()
+	for i := len(dirs) - 1; i >= 0; i-- {
+		if gitignore, exists := m.tree[dirs[i]]; exists {
+			matchers = append(matchers, gitignore)
+		}
+	}
+	m.mu.RUnlock()
+
+	for _, gitignore := range matchers {
+		if gitignore.MatchesPath(relPathUnix) {
 			return true
 		}
 	}
 
 	return false
+}
+
+func (m *GitIgnoreMatcher) loadGitIgnoreForDir(dir string) {
+	m.mu.RLock()
+	_, loaded := m.loadedDirs[dir]
+	m.mu.RUnlock()
+	if loaded {
+		return
+	}
+
+	m.mu.Lock()
+	if _, loaded := m.loadedDirs[dir]; loaded {
+		m.mu.Unlock()
+		return
+	}
+	m.loadedDirs[dir] = struct{}{}
+	m.mu.Unlock()
+
+	gitignorePath := filepath.Join(dir, ".gitignore")
+	if _, err := os.Stat(gitignorePath); err != nil {
+		if !os.IsNotExist(err) {
+			PrintWarning("Could not access .gitignore file at "+gitignorePath+": "+err.Error(), true)
+		}
+		return
+	}
+
+	gitignore, err := ignore.CompileIgnoreFile(gitignorePath)
+	if err != nil {
+		PrintWarning("Could not load .gitignore file at "+gitignorePath+": "+err.Error(), true)
+		return
+	}
+
+	m.mu.Lock()
+	m.tree[dir] = gitignore
+	m.mu.Unlock()
 }

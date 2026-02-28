@@ -127,7 +127,7 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]st
 	}
 
 	// Priority 3: .gitignore matcher - skip files/directories matching .gitignore patterns.
-	if gi != nil && gi.Match(absPath) {
+	if gi != nil && gi.MatchWithType(absPath, isDir) {
 		return true
 	}
 
@@ -356,7 +356,7 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 			return nil
 		}
 
-		absPath, _ := filepath.Abs(path)
+		absPath, _ := normalizeAbsolutePath(path)
 		if _, ok := processedDepFiles[absPath]; ok {
 			return nil
 		}
