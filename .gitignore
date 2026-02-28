@@ -27,5 +27,9 @@ godoc/
 
 # OS-specific
 .DS_Store
+
+# Local tooling cache
+.codex_tmp/
+
 # Added by goreleaser init:
 dist/

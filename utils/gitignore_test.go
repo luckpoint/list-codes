@@ -159,6 +159,49 @@ func TestGitIgnoreMatcher_Match_RootNeverIgnored(t *testing.T) {
 	}
 }
 
+func TestGitIgnoreMatcher_Match_DirectoryNegation(t *testing.T) {
+	tempDir := t.TempDir()
+
+	gitignoreContent := `*
+!*/
+!tests/
+!tests/*.bats
+`
+	if err := os.WriteFile(filepath.Join(tempDir, ".gitignore"), []byte(gitignoreContent), 0644); err != nil {
+		t.Fatalf("Failed to create .gitignore file: %v", err)
+	}
+
+	testsDir := filepath.Join(tempDir, "tests")
+	if err := os.MkdirAll(testsDir, 0755); err != nil {
+		t.Fatalf("Failed to create tests directory: %v", err)
+	}
+
+	batsFile := filepath.Join(testsDir, "sample.bats")
+	if err := os.WriteFile(batsFile, []byte("echo ok"), 0644); err != nil {
+		t.Fatalf("Failed to create bats file: %v", err)
+	}
+
+	ignoredFile := filepath.Join(tempDir, "notes.txt")
+	if err := os.WriteFile(ignoredFile, []byte("ignored"), 0644); err != nil {
+		t.Fatalf("Failed to create ignored file: %v", err)
+	}
+
+	matcher, err := NewGitIgnoreMatcher(tempDir)
+	if err != nil {
+		t.Fatalf("NewGitIgnoreMatcher failed: %v", err)
+	}
+
+	if matcher.MatchWithType(testsDir, true) {
+		t.Error("tests directory should be unignored by '!tests/'")
+	}
+	if matcher.Match(batsFile) {
+		t.Error("tests/*.bats should be unignored by '!tests/*.bats'")
+	}
+	if !matcher.Match(ignoredFile) {
+		t.Error("notes.txt should be ignored by '*' pattern")
+	}
+}
+
 func TestGitIgnoreMatcher_Match_NestedGitignore(t *testing.T) {
 	// Create a temporary directory structure
 	tempDir := t.TempDir()
@@ -294,10 +337,10 @@ build/
 		t.Errorf("File matching .gitignore and not in --include should be skipped")
 	}
 
-	// Test normal file not in .gitignore and not in --include (should NOT be skipped due to additive behavior)
+	// Test normal file not in .gitignore and not in --include (should be skipped in include-only mode)
 	shouldSkip = shouldSkipDir(normalFile, "main.go", false, includePaths, includeMatcher, excludeNames, nil, matcher)
-	if shouldSkip {
-		t.Errorf("Normal file should NOT be skipped when --include is active (additive behavior)")
+	if !shouldSkip {
+		t.Errorf("Normal file should be skipped when --include is active (include-only behavior)")
 	}
 }
 

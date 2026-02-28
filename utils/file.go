@@ -74,13 +74,13 @@ func IsAssetFile(filePath string, debug bool) bool {
 }
 
 // shouldSkipDir determines whether to skip directories or files based on a set of rules.
-// The logic prioritizes user intent with additive include behavior:
+// The logic prioritizes user intent with include-only behavior when --include is set:
 //  1. User-defined exclusions (--exclude) always result in a skip.
 //  2. If --include is used, items matching include patterns override default exclusions.
 //     This rule overrides the default dotfile exclusion and .gitignore rules.
 //  3. .gitignore matcher (if provided) - files/dirs matching .gitignore patterns are skipped.
 //  4. Any item starting with a '.' is skipped by default (unless explicitly included).
-//  5. Normal source file inclusion continues (no include-only mode).
+//  5. If --include is active, non-whitelisted items are skipped.
 func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, gi *GitIgnoreMatcher) bool {
 	absPath, err := filepath.Abs(fullPath)
 	if err != nil {
@@ -96,33 +96,31 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]st
 		return true
 	}
 
-	// Priority 2: Include additions override default exclusions.
-	// If an item is explicitly included or is a parent of an included item,
-	// it should NOT be skipped, even if it's a dotfile or matches .gitignore.
-	if (includeMatcher != nil && includeMatcher.HasPatterns()) || len(includePaths) > 0 {
-		isExplicitlyIncluded := false
-
-		// Check patterns
-		if includeMatcher != nil && includeMatcher.Match(absPath) {
-			isExplicitlyIncluded = true
-		}
-
-		// Check fixed paths (parent traversal)
-		if !isExplicitlyIncluded && len(includePaths) > 0 {
-			for incPath := range includePaths {
-				// A path is included if it's the included path itself, or a parent of it.
-				// e.g., include "a/b", current is "a" -> strings.HasPrefix("a/b", "a") -> true
-				// e.g., include "a/b", current is "a/b" -> strings.HasPrefix("a/b", "a/b") -> true
-				if strings.HasPrefix(incPath, absPath) || strings.HasPrefix(absPath, incPath) {
-					isExplicitlyIncluded = true
-					break
-				}
-			}
-		}
-
-		if isExplicitlyIncluded {
+	// Priority 2: Include whitelist.
+	hasIncludePatterns := includeMatcher != nil && includeMatcher.HasPatterns()
+	hasIncludePaths := len(includePaths) > 0
+	if hasIncludePatterns || hasIncludePaths {
+		// For explicit include paths we can perform strict include-only filtering
+		// with boundary-safe path checks.
+		if hasIncludePaths && isPathRelatedToIncludes(absPath, includePaths) {
 			return false
 		}
+		if includeMatcher != nil && includeMatcher.Match(absPath) {
+			return false
+		}
+
+		// With pattern-only includes, keep traversing directories because
+		// descendants may match (for example, "**/*.md").
+		if isDir && hasIncludePatterns && !hasIncludePaths {
+			if strings.HasPrefix(name, ".") && name != "." && name != ".." {
+				return true
+			}
+			if gi != nil && gi.MatchWithType(absPath, true) {
+				return true
+			}
+			return false
+		}
+
 		return true
 	}
 
@@ -138,6 +136,36 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]st
 	}
 
 	// If no rules caused a skip, process the item.
+	return false
+}
+
+func shouldSkipPath(absPath, name string, isDir bool, includePaths, excludeNames, excludePaths map[string]struct{}, gi *GitIgnoreMatcher) bool {
+	// Priority 1: Explicit --exclude options and hardcoded names always cause a skip.
+	if _, ok := excludeNames[name]; ok {
+		return true
+	}
+	if _, ok := excludePaths[absPath]; ok {
+		return true
+	}
+
+	// Priority 2: include-only behavior for scanner-based paths.
+	if len(includePaths) > 0 {
+		if isPathRelatedToIncludes(absPath, includePaths) {
+			return false
+		}
+		return true
+	}
+
+	// Priority 3: .gitignore matcher - skip files/directories matching .gitignore patterns.
+	if gi != nil && gi.MatchWithType(absPath, isDir) {
+		return true
+	}
+
+	// Priority 4: Default exclusion for dotfiles and dot-directories.
+	if strings.HasPrefix(name, ".") && name != "." && name != ".." {
+		return true
+	}
+
 	return false
 }
 
@@ -286,6 +314,9 @@ func CollectReadmeFiles(folderAbs string, includePaths map[string]struct{}, incl
 			PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, err), debug)
 			return nil
 		}
+		if path == folderAbs {
+			return nil
+		}
 
 		if d.IsDir() {
 			if shouldSkipDir(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
@@ -342,6 +373,9 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 	walkErr := filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, debug), debug)
+			return nil
+		}
+		if path == folderAbs {
 			return nil
 		}
 

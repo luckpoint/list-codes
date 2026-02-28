@@ -3,6 +3,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/sabhiram/go-gitignore"
@@ -25,8 +26,9 @@ func NewGitIgnoreMatcher(root string) (*GitIgnoreMatcher, error) {
 	}
 
 	matcher := &GitIgnoreMatcher{
-		root: absRoot,
-		tree: make(map[string]*ignore.GitIgnore),
+		root:       absRoot,
+		tree:       make(map[string]*ignore.GitIgnore),
+		loadedDirs: make(map[string]struct{}),
 	}
 
 	// Walk the directory tree and load .gitignore files
@@ -153,9 +155,17 @@ func (m *GitIgnoreMatcher) MatchWithType(path string, isDir bool) bool {
 	if err != nil {
 		return false
 	}
+	if relPath == "." {
+		return false
+	}
 
-	// Convert to forward slashes for gitignore matching
+	// Convert to forward slashes for gitignore matching.
+	// Directory patterns like "tests/" and negations like "!tests/" rely on a trailing slash.
 	relPathUnix := filepath.ToSlash(relPath)
+	matchPath := relPathUnix
+	if isDir && !strings.HasSuffix(matchPath, "/") {
+		matchPath += "/"
+	}
 
 	// Start from the file's directory and walk up to root
 	currentDir := absPath
@@ -192,7 +202,7 @@ func (m *GitIgnoreMatcher) MatchWithType(path string, isDir bool) bool {
 	m.mu.RUnlock()
 
 	for _, gitignore := range matchers {
-		if gitignore.MatchesPath(relPathUnix) {
+		if gitignore.MatchesPath(matchPath) {
 			return true
 		}
 	}

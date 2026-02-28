@@ -90,6 +90,7 @@ func TestExtensions(t *testing.T) {
 		{"Rust", []string{".rs"}},
 		{"Java", []string{".java"}},
 		{"C++", []string{".cpp", ".hpp", ".cxx", ".hxx", ".cc", ".hh", ".c++", ".h++"}},
+		{"Batch", []string{".bat", ".cmd"}},
 		{"Dockerfile", []string{"Dockerfile"}},
 		{"Markdown", []string{".md"}},
 		{"Solidity", []string{".sol"}},

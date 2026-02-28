@@ -28,6 +28,7 @@ func TestGetLanguageByExtension(t *testing.T) {
 		{name: "Phoenix HEEx", fileName: "index.heex", expected: "HTML"},
 		{name: "JSP", fileName: "view.jsp", expected: "HTML"},
 		{name: "Bats file", fileName: "e2e_basic_flow.bats", expected: "Bash"},
+		{name: "Windows batch file", fileName: "install.bat", expected: "Batch"},
 	}
 
 	for _, tt := range tests {

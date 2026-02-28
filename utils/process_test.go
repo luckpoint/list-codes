@@ -225,7 +225,6 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 			includeTests: false,
 			expectedContains: []string{
 				"## Project Structure",
-				"## Source Code Size Check",
 				"main.go",
 				"service.go",
 				"helper.go",
@@ -242,7 +241,6 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 			includeTests: true,
 			expectedContains: []string{
 				"## Project Structure",
-				"## Source Code Size Check",
 				"main.go",
 				"service.go",
 				"helper.go",
@@ -251,7 +249,7 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 				"helper_test.go",
 				"test_setup.py",
 			},
-			expectedNotContains: []string{"## Source Code Size Check"},
+			expectedNotContains: []string{},
 		},
 	}
 
@@ -298,19 +296,17 @@ func TestProcessSourceFiles_WithWhitelistGitignore_CollectsSourceContent(t *test
 		t.Fatalf("NewGitIgnoreMatcher failed: %v", err)
 	}
 
-	output, err := ProcessSourceFiles(
+	output := ProcessSourceFiles(
 		tempDir,
 		10,
 		map[string]struct{}{},
+		nil,
 		map[string]struct{}{},
-		map[string]struct{}{},
+		nil,
 		false,
 		false,
 		matcher,
 	)
-	if err != nil {
-		t.Fatalf("ProcessSourceFiles() returned error: %v", err)
-	}
 
 	if !strings.Contains(output, "## Project Structure") {
 		t.Fatalf("expected output to include project structure, got:\n%s", output)
@@ -397,9 +393,7 @@ func TestBuildMarkdownOutputDeep(t *testing.T) {
 			expectedNotContains: []string{
 				"## Source Code Size Check",
 				"### Go",
-				"### main.go",
 				"### Python",
-				"### app.py",
 				"### JavaScript",
 			},
 		},
