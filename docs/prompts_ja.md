@@ -110,19 +110,43 @@
 ユーザーと開発者の両方の視点から提案してください。
 ```
 
-### 8. migrate（技術移行提案）
-```
-以下のコードベースを分析し、技術スタックの移行や更新の提案を行ってください：
+### 8. deps-tree（Mermaid依存関係ツリー）
+~~~
+以下のコードベースを分析し、このプロジェクトの依存関係ツリーをMermaid記法で作成してください。
 
-1. **古いライブラリやフレームワークの更新**
-2. **より適切な技術選択の提案**
-3. **言語バージョンのアップデート**
-4. **アーキテクチャの現代化**
-5. **移行に伴うリスクと利点**
-6. **段階的な移行計画**
+要件:
+1. **依存関係を次の観点で可視化**
+   - 外部依存（ライブラリ/パッケージ）
+   - 内部依存（モジュール/ディレクトリ/レイヤー）
+   - 実行時依存（DB、Queue、外部API、インフラ）
+2. **Mermaid図を2〜4個出力**（最小2個）
+3. 各図の直前に、何を表す図かを1行で説明
+4. 推測で補完しない。不明な関係は unknown と明示
+5. 最後に根拠ファイル（go.mod、package.json、requirements.txt、import文など）を列挙
 
-移行の複雑さとメリットを評価してください。
+出力形式:
+### Dependency Tree 1: External Dependencies
+```mermaid
+graph TD
+...
 ```
+
+### Dependency Tree 2: Internal Module Dependencies
+```mermaid
+graph TD
+...
+```
+
+### Dependency Tree 3: Runtime / Infrastructure Dependencies
+```mermaid
+graph TD
+...
+```
+
+### Evidence
+- path/to/file: reason
+- path/to/file: reason
+~~~
 
 ### 9. scale（スケーラビリティ分析）
 ```

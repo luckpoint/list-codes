@@ -110,19 +110,43 @@ Please analyze the following codebase and provide documentation improvement sugg
 Please provide suggestions from both user and developer perspectives.
 ```
 
-### 8. migrate (Technology Migration Suggestions)
-```
-Please analyze the following codebase and provide suggestions for technology stack migration or updates:
+### 8. deps-tree (Dependency Trees in Mermaid)
+~~~
+Please analyze the following codebase and build dependency trees for this project using Mermaid syntax.
 
-1. **Updates for outdated libraries and frameworks**
-2. **Suggestions for more appropriate technology choices**
-3. **Language version updates**
-4. **Architecture modernization**
-5. **Risks and benefits of migration**
-6. **Phased migration plan**
+Requirements:
+1. **Visualize dependencies from these perspectives**
+   - External dependencies (libraries/packages)
+   - Internal dependencies (modules/directories/layers)
+   - Runtime dependencies (DB, queue, external APIs, infrastructure)
+2. **Output 2 to 4 Mermaid diagrams** (at least 2)
+3. Add a one-line description before each diagram
+4. Do not infer missing relations. Mark uncertain links as unknown
+5. End with evidence files (for example: go.mod, package.json, requirements.txt, import statements)
 
-Please evaluate the complexity and benefits of migration.
+Output format:
+### Dependency Tree 1: External Dependencies
+```mermaid
+graph TD
+...
 ```
+
+### Dependency Tree 2: Internal Module Dependencies
+```mermaid
+graph TD
+...
+```
+
+### Dependency Tree 3: Runtime / Infrastructure Dependencies
+```mermaid
+graph TD
+...
+```
+
+### Evidence
+- path/to/file: reason
+- path/to/file: reason
+~~~
 
 ### 9. scale (Scalability Analysis)
 ```

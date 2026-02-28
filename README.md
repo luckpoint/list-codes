@@ -91,7 +91,7 @@ The `--prompt` option allows you to prepend specialized prompts to your code out
 - `optimize` - Performance optimization recommendations
 - `test` - Testing strategy and test case suggestions
 - `document` - Documentation improvement suggestions
-- `migrate` - Technology stack migration advice
+- `deps-tree` - Dependency tree generation in Mermaid (external/internal/runtime)
 - `scale` - Scalability analysis and recommendations
 - `maintain` - Code maintainability improvements
 - `api-design` - API design evaluation and suggestions

@@ -3,7 +3,9 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -85,10 +87,7 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]st
 		PrintWarning(fmt.Sprintf("Could not get absolute path for %s: %v", fullPath, err), true)
 		return true // Failsafe skip
 	}
-	return shouldSkipPath(absPath, name, isDir, includePaths, excludeNames, excludePaths, gi)
-}
 
-func shouldSkipPath(absPath, name string, isDir bool, includePaths, excludeNames, excludePaths map[string]struct{}, gi *GitIgnoreMatcher) bool {
 	// Priority 1: Explicit --exclude options and hardcoded names always cause a skip.
 	if _, ok := excludeNames[name]; ok {
 		return true
@@ -128,7 +127,7 @@ func shouldSkipPath(absPath, name string, isDir bool, includePaths, excludeNames
 	}
 
 	// Priority 3: .gitignore matcher - skip files/directories matching .gitignore patterns.
-	if gi != nil && gi.MatchWithType(absPath, isDir) {
+	if gi != nil && gi.Match(absPath) {
 		return true
 	}
 
@@ -167,21 +166,16 @@ func isPathRelatedToIncludes(absPath string, includePaths map[string]struct{}) b
 // GenerateDirectoryStructure generates the project directory structure in Markdown format.
 func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, includeTests bool, gi *GitIgnoreMatcher) string {
 	PrintDebug("Generating directory structure...", debugMode)
-	scanner := projectScanner{
-		rootPath:         startPath,
-		includePaths:     includePaths,
-		excludeNames:     excludeNames,
-		excludePaths:     excludePaths,
-		debug:            debugMode,
-		includeTests:     includeTests,
-		gi:               gi,
-		collectStructure: true,
-	}
+	var structureLines []string
+	structureLines = append(structureLines, "## Project Structure", "```text")
 
-	result, err := scanner.scan()
+	absStartPath, err := filepath.Abs(startPath)
 	if err != nil {
-		return "", fmt.Errorf("could not generate directory structure for %s: %w", startPath, err)
+		PrintError(fmt.Sprintf("Could not get absolute path for %s: %v", startPath, err))
+		return ""
 	}
+	rootDisplayName := filepath.Base(absStartPath)
+	structureLines = append(structureLines, fmt.Sprintf(". (%s)", rootDisplayName))
 
 	var generateTreeRecursive func(currentPath, prefix string, depth int)
 	generateTreeRecursive = func(currentPath, prefix string, depth int) {
@@ -279,26 +273,19 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 	generateTreeRecursive(absStartPath, "", 0)
 	structureLines = append(structureLines, "```")
 	PrintDebug("Directory structure generation complete.", debugMode)
-	return structureMD, nil
+	return strings.Join(structureLines, "\n") + "\n\n"
 }
 
 // CollectReadmeFiles collects README.md files in the project and returns their content in Markdown format.
 func CollectReadmeFiles(folderAbs string, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, debug bool, gi *GitIgnoreMatcher) string {
 	PrintDebug("Searching for README.md files...", debug)
-	scanner := projectScanner{
-		rootPath:       folderAbs,
-		includePaths:   includePaths,
-		excludeNames:   excludeNames,
-		excludePaths:   excludePaths,
-		debug:          debug,
-		gi:             gi,
-		collectReadmes: true,
-	}
+	var readmeFiles []string
 
-	result, err := scanner.scan()
-	if err != nil {
-		return "", fmt.Errorf("error during README scan: %w", err)
-	}
+	filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, err), debug)
+			return nil
+		}
 
 		if d.IsDir() {
 			if shouldSkipDir(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
@@ -331,9 +318,9 @@ func CollectReadmeFiles(folderAbs string, includePaths map[string]struct{}, incl
 
 	PrintDebug(fmt.Sprintf("Found %d README.md file(s).", len(readmeFiles)), debug)
 	if len(readmeFiles) == 0 {
-		return "# Project README Files\n\nNo README.md files found in the project.", nil
+		return "# Project README Files\n\nNo README.md files found in the project."
 	}
-	return "# Project README Files\n\n" + strings.Join(readmeFiles, "\n"), nil
+	return "# Project README Files\n\n" + strings.Join(readmeFiles, "\n")
 }
 
 // collectDependencyFiles collects dependency files.
@@ -352,11 +339,11 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 	var limitHit bool
 	PrintDebug("Processing source files...", debug)
 
-	// By default, process all source files even if they belong to languages
-	// that are not part of the detected primaryLangs. This preserves the
-	// current broad-coverage behaviour while scanner handles traversal once.
-	_ = primaryLangs
-	_ = fallbackLangs
+	walkErr := filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, debug), debug)
+			return nil
+		}
 
 		if d.IsDir() {
 			if shouldSkipDir(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
@@ -369,7 +356,7 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 			return nil
 		}
 
-		absPath, _ := normalizeAbsolutePath(path)
+		absPath, _ := filepath.Abs(path)
 		if _, ok := processedDepFiles[absPath]; ok {
 			return nil
 		}
@@ -471,13 +458,5 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		PrintWarning(fmt.Sprintf("Error during file walk: %v", walkErr), debug)
 	}
 
-	result, err := scanner.scan()
-	if err != nil && !errors.Is(err, errTotalSizeLimitExceeded) {
-		return nil, 0, nil, false, fmt.Errorf("error during source scan: %w", err)
-	}
-	if result == nil {
-		return map[string][]string{}, 0, nil, false, nil
-	}
-
-	return result.sourceFileContents, result.totalFileSize, result.skippedFileMessages, result.limitHit, nil
+	return sourceFileContents, totalFileSize, skippedFileMessages, limitHit
 }

@@ -14,10 +14,8 @@ func getEnglishHelpMessages() (string, string, string) {
 	long := `list-codes is a CLI tool that scans a specified project folder and generates a Markdown summary including:
 
 - Project directory structure
-- Detected programming languages and frameworks
-- Collected dependency and configuration files (in debug mode)
-- Collected source code files
-- Collected README files (if --readme-only is specified)
+- Collected source code files (with language-aware code blocks)
+- Source code size diagnostics in debug mode (--debug)
 
 The --prompt option allows you to prepend analysis prompts for LLM processing:
 
@@ -29,7 +27,7 @@ Available prompt templates:
   optimize      - Performance optimization suggestions
   test          - Test coverage and testing strategy improvements
   document      - Documentation improvement recommendations
-  migrate       - Technology stack migration proposals
+  deps-tree     - Project dependency trees in Mermaid (external/internal/runtime)
   scale         - Scalability analysis and recommendations
   maintain      - Code maintainability assessment
   api-design    - API design review and improvements
@@ -89,10 +87,8 @@ func getJapaneseHelpMessages() (string, string, string) {
 	long := `list-codesは、指定されたプロジェクトフォルダをスキャンし、以下を含むMarkdownファイルを生成するCLIツールです：
 
 - プロジェクトディレクトリ構造
-- 検出されたプログラミング言語とフレームワーク
-- 収集された依存関係と設定ファイル（デバッグモード時）
-- 収集されたソースコードファイル
-- 収集されたREADMEファイル（--readme-onlyが指定された場合）
+- 収集されたソースコードファイル（言語ヒント付きコードブロック）
+- ソースコードサイズ診断情報（--debug時）
 
 --promptオプションを使用すると、LLM処理用の分析プロンプトを先頭に追加できます：
 
@@ -104,7 +100,7 @@ func getJapaneseHelpMessages() (string, string, string) {
   optimize      - パフォーマンス最適化提案
   test          - テストカバレッジとテスト戦略改善
   document      - ドキュメント改善推奨事項
-  migrate       - 技術スタック移行提案
+  deps-tree     - Mermaidで依存関係ツリーを生成（外部/内部/実行時）
   scale         - スケーラビリティ分析と推奨事項
   maintain      - コード保守性評価
   api-design    - API設計レビューと改善
@@ -156,4 +152,3 @@ PowerShell:
 
 	return short, long, completion
 }
-

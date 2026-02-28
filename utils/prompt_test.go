@@ -167,7 +167,7 @@ func TestPromptTemplatesExist(t *testing.T) {
 	// Verify that all expected English prompt templates exist and have content
 	expectedTemplates := []string{
 		"explain", "find-bugs", "refactor", "security", "optimize",
-		"test", "document", "migrate", "scale", "maintain",
+		"test", "document", "deps-tree", "scale", "maintain",
 		"api-design", "patterns", "review", "architecture", "deploy",
 	}
 	
@@ -225,7 +225,7 @@ func TestPromptTemplatesExistJapanese(t *testing.T) {
 	// Verify that Japanese templates exist and have content
 	expectedTemplates := []string{
 		"explain", "find-bugs", "refactor", "security", "optimize",
-		"test", "document", "migrate", "scale", "maintain",
+		"test", "document", "deps-tree", "scale", "maintain",
 		"api-design", "patterns", "review", "architecture", "deploy",
 	}
 	

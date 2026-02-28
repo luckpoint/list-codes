@@ -82,16 +82,40 @@ var PromptTemplatesJA = map[string]string{
 
 ユーザーと開発者の両方の視点から提案してください。`,
 
-	"migrate": `以下のコードベースを分析し、技術スタックの移行や更新の提案を行ってください：
+	"deps-tree": `以下のコードベースを分析し、このプロジェクトの依存関係ツリーをMermaid記法で作成してください。
 
-1. **古いライブラリやフレームワークの更新**
-2. **より適切な技術選択の提案**
-3. **言語バージョンのアップデート**
-4. **アーキテクチャの現代化**
-5. **移行に伴うリスクと利点**
-6. **段階的な移行計画**
+要件:
+1. **依存関係を次の観点で可視化**
+   - 外部依存（ライブラリ/パッケージ）
+   - 内部依存（モジュール/ディレクトリ/レイヤー）
+   - 実行時依存（DB、Queue、外部API、インフラ）
+2. **Mermaid図を2〜4個出力**（最小2個）
+3. 各図の直前に、何を表す図かを1行で説明
+4. 推測で補完しない。不明な関係は unknown と明示
+5. 最後に根拠ファイル（go.mod、package.json、requirements.txt、import文など）を列挙
 
-移行の複雑さとメリットを評価してください。`,
+出力形式:
+### Dependency Tree 1: External Dependencies
+~~~mermaid
+graph TD
+...
+~~~
+
+### Dependency Tree 2: Internal Module Dependencies
+~~~mermaid
+graph TD
+...
+~~~
+
+### Dependency Tree 3: Runtime / Infrastructure Dependencies
+~~~mermaid
+graph TD
+...
+~~~
+
+### Evidence
+- path/to/file: reason
+- path/to/file: reason`,
 
 	"scale": `以下のコードベースをスケーラビリティの観点から分析してください：
 
@@ -249,16 +273,40 @@ Please also provide specific test case examples.`,
 
 Please provide suggestions from both user and developer perspectives.`,
 
-	"migrate": `Please analyze the following codebase and provide technology stack migration and update suggestions:
+	"deps-tree": `Please analyze the following codebase and build dependency trees for this project using Mermaid syntax.
 
-1. **Updating old libraries and frameworks**
-2. **More appropriate technology choice suggestions**
-3. **Language version updates**
-4. **Architecture modernization**
-5. **Migration risks and benefits**
-6. **Gradual migration plans**
+Requirements:
+1. **Visualize dependencies from these perspectives**
+   - External dependencies (libraries/packages)
+   - Internal dependencies (modules/directories/layers)
+   - Runtime dependencies (DB, queue, external APIs, infrastructure)
+2. **Output 2 to 4 Mermaid diagrams** (at least 2)
+3. Add a one-line description before each diagram
+4. Do not infer missing relations. Mark uncertain links as unknown
+5. End with evidence files (for example: go.mod, package.json, requirements.txt, import statements)
 
-Please evaluate migration complexity and benefits.`,
+Output format:
+### Dependency Tree 1: External Dependencies
+~~~mermaid
+graph TD
+...
+~~~
+
+### Dependency Tree 2: Internal Module Dependencies
+~~~mermaid
+graph TD
+...
+~~~
+
+### Dependency Tree 3: Runtime / Infrastructure Dependencies
+~~~mermaid
+graph TD
+...
+~~~
+
+### Evidence
+- path/to/file: reason
+- path/to/file: reason`,
 
 	"scale": `Please analyze the following codebase from a scalability perspective:
 
