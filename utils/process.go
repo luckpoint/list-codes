@@ -93,5 +93,42 @@ func ProcessSourceFiles(folderAbs string, maxDepth int, includePaths map[string]
 	depFileContents, processedDepFiles := collectDependencyFiles(folderAbs, nil, nil, includePaths, includeMatcher, excludeNames, excludeMatcher, debug, gi)
 	sourceFileContents, totalFileSize, skippedFileMessages, limitHit := collectSourceFiles(folderAbs, nil, nil, processedDepFiles, includePaths, includeMatcher, excludeNames, excludeMatcher, debug, includeTests, gi)
 
-	return buildMarkdownOutput(directoryStructureMD, depFileContents, sourceFileContents, totalFileSize, skippedFileMessages, limitHit, debug)
+	scanner := projectScanner{
+		rootPath:          folderAbs,
+		includePaths:      includePaths,
+		excludeNames:      excludeNames,
+		excludePaths:      excludePaths,
+		debug:             debug,
+		includeTests:      includeTests,
+		gi:                gi,
+		processedDepFiles: processedDepFiles,
+		collectStructure:  true,
+		collectSources:    true,
+		// Keep walking after source limit is hit so project structure remains complete.
+		stopWalkOnSourceLimit: false,
+	}
+
+	result, err := scanner.scan()
+	if err != nil {
+		PrintWarning(fmt.Sprintf("Error during project scan: %v", err), debug)
+	}
+	if result == nil {
+		result = &scanResult{
+			rootPath:           folderAbs,
+			structureChildren:  map[string][]scannedEntry{},
+			sourceFileContents: map[string][]string{},
+		}
+	}
+
+	directoryStructureMD := buildDirectoryStructureMarkdown(result.rootPath, maxDepth, result.structureChildren)
+
+	return buildMarkdownOutput(
+		directoryStructureMD,
+		depFileContents,
+		result.sourceFileContents,
+		result.totalFileSize,
+		result.skippedFileMessages,
+		result.limitHit,
+		debug,
+	)
 }

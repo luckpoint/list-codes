@@ -3,9 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -87,7 +85,10 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]st
 		PrintWarning(fmt.Sprintf("Could not get absolute path for %s: %v", fullPath, err), true)
 		return true // Failsafe skip
 	}
+	return shouldSkipPath(absPath, name, isDir, includePaths, excludeNames, excludePaths, gi)
+}
 
+func shouldSkipPath(absPath, name string, isDir bool, includePaths, excludeNames, excludePaths map[string]struct{}, gi *GitIgnoreMatcher) bool {
 	// Priority 1: Explicit --exclude options and hardcoded names always cause a skip.
 	if _, ok := excludeNames[name]; ok {
 		return true
@@ -166,16 +167,22 @@ func isPathRelatedToIncludes(absPath string, includePaths map[string]struct{}) b
 // GenerateDirectoryStructure generates the project directory structure in Markdown format.
 func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, includeTests bool, gi *GitIgnoreMatcher) string {
 	PrintDebug("Generating directory structure...", debugMode)
-	var structureLines []string
-	structureLines = append(structureLines, "## Project Structure", "```text")
+	scanner := projectScanner{
+		rootPath:         startPath,
+		includePaths:     includePaths,
+		excludeNames:     excludeNames,
+		excludePaths:     excludePaths,
+		debug:            debugMode,
+		includeTests:     includeTests,
+		gi:               gi,
+		collectStructure: true,
+	}
 
-	absStartPath, err := filepath.Abs(startPath)
+	result, err := scanner.scan()
 	if err != nil {
 		PrintError(fmt.Sprintf("Could not get absolute path for %s: %v", startPath, err))
 		return ""
 	}
-	rootDisplayName := filepath.Base(absStartPath)
-	structureLines = append(structureLines, fmt.Sprintf(". (%s)", rootDisplayName))
 
 	var generateTreeRecursive func(currentPath, prefix string, depth int)
 	generateTreeRecursive = func(currentPath, prefix string, depth int) {
@@ -273,19 +280,26 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 	generateTreeRecursive(absStartPath, "", 0)
 	structureLines = append(structureLines, "```")
 	PrintDebug("Directory structure generation complete.", debugMode)
-	return strings.Join(structureLines, "\n") + "\n\n"
+	return structureMD
 }
 
 // CollectReadmeFiles collects README.md files in the project and returns their content in Markdown format.
 func CollectReadmeFiles(folderAbs string, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, debug bool, gi *GitIgnoreMatcher) string {
 	PrintDebug("Searching for README.md files...", debug)
-	var readmeFiles []string
+	scanner := projectScanner{
+		rootPath:       folderAbs,
+		includePaths:   includePaths,
+		excludeNames:   excludeNames,
+		excludePaths:   excludePaths,
+		debug:          debug,
+		gi:             gi,
+		collectReadmes: true,
+	}
 
-	filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, err), debug)
-			return nil
-		}
+	result, err := scanner.scan()
+	if err != nil {
+		PrintWarning(fmt.Sprintf("Error during README scan: %v", err), debug)
+	}
 
 		if d.IsDir() {
 			if shouldSkipDir(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
@@ -339,11 +353,11 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 	var limitHit bool
 	PrintDebug("Processing source files...", debug)
 
-	walkErr := filepath.WalkDir(folderAbs, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			PrintWarning(fmt.Sprintf("Error accessing path %s: %v", path, debug), debug)
-			return nil
-		}
+	// By default, process all source files even if they belong to languages
+	// that are not part of the detected primaryLangs. This preserves the
+	// current broad-coverage behaviour while scanner handles traversal once.
+	_ = primaryLangs
+	_ = fallbackLangs
 
 		if d.IsDir() {
 			if shouldSkipDir(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
@@ -458,5 +472,13 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		PrintWarning(fmt.Sprintf("Error during file walk: %v", walkErr), debug)
 	}
 
-	return sourceFileContents, totalFileSize, skippedFileMessages, limitHit
+	result, err := scanner.scan()
+	if err != nil && !errors.Is(err, errTotalSizeLimitExceeded) {
+		PrintWarning(fmt.Sprintf("Error during source scan: %v", err), debug)
+	}
+	if result == nil {
+		return map[string][]string{}, 0, nil, false
+	}
+
+	return result.sourceFileContents, result.totalFileSize, result.skippedFileMessages, result.limitHit
 }
