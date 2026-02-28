@@ -298,7 +298,7 @@ func TestProcessSourceFiles_WithWhitelistGitignore_CollectsSourceContent(t *test
 		t.Fatalf("NewGitIgnoreMatcher failed: %v", err)
 	}
 
-	output := ProcessSourceFiles(
+	output, err := ProcessSourceFiles(
 		tempDir,
 		10,
 		map[string]struct{}{},
@@ -308,6 +308,9 @@ func TestProcessSourceFiles_WithWhitelistGitignore_CollectsSourceContent(t *test
 		false,
 		matcher,
 	)
+	if err != nil {
+		t.Fatalf("ProcessSourceFiles() returned error: %v", err)
+	}
 
 	if !strings.Contains(output, "## Project Structure") {
 		t.Fatalf("expected output to include project structure, got:\n%s", output)

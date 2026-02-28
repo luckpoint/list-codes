@@ -935,7 +935,7 @@ func TestCollectReadmeFiles_NoBlankLineBetweenHeaderAndCodeFence(t *testing.T) {
 		t.Fatalf("Failed to create README.md: %v", err)
 	}
 
-	output := CollectReadmeFiles(
+	output, err := CollectReadmeFiles(
 		tempDir,
 		map[string]struct{}{},
 		map[string]struct{}{},
@@ -943,6 +943,9 @@ func TestCollectReadmeFiles_NoBlankLineBetweenHeaderAndCodeFence(t *testing.T) {
 		false,
 		nil,
 	)
+	if err != nil {
+		t.Fatalf("CollectReadmeFiles() returned error: %v", err)
+	}
 
 	if !strings.Contains(output, "### README.md\n```markdown\n") {
 		t.Fatalf("expected header and code fence to be adjacent for README output, got:\n%s", output)
@@ -960,7 +963,7 @@ func TestCollectSourceFiles_NoBlankLineBetweenHeaderAndCodeFence(t *testing.T) {
 		t.Fatalf("Failed to create main.go: %v", err)
 	}
 
-	sourceFileContents, _, _, _ := collectSourceFiles(
+	sourceFileContents, _, _, _, err := collectSourceFiles(
 		tempDir,
 		[]string{"Go"},
 		map[string]int{"Go": 1},
@@ -972,6 +975,9 @@ func TestCollectSourceFiles_NoBlankLineBetweenHeaderAndCodeFence(t *testing.T) {
 		false,
 		nil,
 	)
+	if err != nil {
+		t.Fatalf("collectSourceFiles() returned error: %v", err)
+	}
 
 	var allOutput strings.Builder
 	for _, contents := range sourceFileContents {

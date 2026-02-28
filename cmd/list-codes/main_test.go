@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/luckpoint/list-codes/utils"
 )
 
 func TestResolvePathPatternsGlob(t *testing.T) {
@@ -18,7 +20,7 @@ func TestResolvePathPatternsGlob(t *testing.T) {
 		t.Fatalf("failed to create main.go: %v", err)
 	}
 
-	got := resolvePathPatterns(tempDir, []string{"*.md"}, "include", false)
+	got := utils.ResolvePathPatterns(tempDir, []string{"*.md"}, "include", false)
 	if _, ok := got[readme]; !ok {
 		t.Fatalf("expected README.md to be resolved from glob pattern")
 	}
@@ -50,7 +52,7 @@ func TestResolvePathPatternsDoubleStar(t *testing.T) {
 		}
 	}
 
-	got := resolvePathPatterns(tempDir, []string{"docs/**/*.md"}, "include", false)
+	got := utils.ResolvePathPatterns(tempDir, []string{"docs/**/*.md"}, "include", false)
 	if _, ok := got[topLevelMD]; !ok {
 		t.Fatalf("expected top-level markdown under docs to match docs/**/*.md")
 	}
@@ -65,7 +67,7 @@ func TestResolvePathPatternsDoubleStar(t *testing.T) {
 func TestResolvePathPatternsNoMatchKeepsLiteralPattern(t *testing.T) {
 	tempDir := t.TempDir()
 
-	got := resolvePathPatterns(tempDir, []string{"missing/*.md"}, "include", false)
+	got := utils.ResolvePathPatterns(tempDir, []string{"missing/*.md"}, "include", false)
 	expectedLiteral := filepath.Join(tempDir, "missing", "*.md")
 	expectedLiteralAbs, err := filepath.Abs(expectedLiteral)
 	if err != nil {

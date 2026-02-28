@@ -110,7 +110,7 @@ func ProcessSourceFiles(folderAbs string, maxDepth int, includePaths map[string]
 
 	result, err := scanner.scan()
 	if err != nil {
-		PrintWarning(fmt.Sprintf("Error during project scan: %v", err), debug)
+		return "", fmt.Errorf("error during project scan: %w", err)
 	}
 	if result == nil {
 		result = &scanResult{
@@ -130,5 +130,5 @@ func ProcessSourceFiles(folderAbs string, maxDepth int, includePaths map[string]
 		result.skippedFileMessages,
 		result.limitHit,
 		debug,
-	)
+	), nil
 }

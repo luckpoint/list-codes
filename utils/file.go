@@ -180,8 +180,7 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 
 	result, err := scanner.scan()
 	if err != nil {
-		PrintError(fmt.Sprintf("Could not get absolute path for %s: %v", startPath, err))
-		return ""
+		return "", fmt.Errorf("could not generate directory structure for %s: %w", startPath, err)
 	}
 
 	var generateTreeRecursive func(currentPath, prefix string, depth int)
@@ -280,7 +279,7 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 	generateTreeRecursive(absStartPath, "", 0)
 	structureLines = append(structureLines, "```")
 	PrintDebug("Directory structure generation complete.", debugMode)
-	return structureMD
+	return structureMD, nil
 }
 
 // CollectReadmeFiles collects README.md files in the project and returns their content in Markdown format.
@@ -298,7 +297,7 @@ func CollectReadmeFiles(folderAbs string, includePaths map[string]struct{}, incl
 
 	result, err := scanner.scan()
 	if err != nil {
-		PrintWarning(fmt.Sprintf("Error during README scan: %v", err), debug)
+		return "", fmt.Errorf("error during README scan: %w", err)
 	}
 
 		if d.IsDir() {
@@ -332,9 +331,9 @@ func CollectReadmeFiles(folderAbs string, includePaths map[string]struct{}, incl
 
 	PrintDebug(fmt.Sprintf("Found %d README.md file(s).", len(readmeFiles)), debug)
 	if len(readmeFiles) == 0 {
-		return "# Project README Files\n\nNo README.md files found in the project."
+		return "# Project README Files\n\nNo README.md files found in the project.", nil
 	}
-	return "# Project README Files\n\n" + strings.Join(readmeFiles, "\n")
+	return "# Project README Files\n\n" + strings.Join(readmeFiles, "\n"), nil
 }
 
 // collectDependencyFiles collects dependency files.
@@ -474,11 +473,11 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 
 	result, err := scanner.scan()
 	if err != nil && !errors.Is(err, errTotalSizeLimitExceeded) {
-		PrintWarning(fmt.Sprintf("Error during source scan: %v", err), debug)
+		return nil, 0, nil, false, fmt.Errorf("error during source scan: %w", err)
 	}
 	if result == nil {
-		return map[string][]string{}, 0, nil, false
+		return map[string][]string{}, 0, nil, false, nil
 	}
 
-	return result.sourceFileContents, result.totalFileSize, result.skippedFileMessages, result.limitHit
+	return result.sourceFileContents, result.totalFileSize, result.skippedFileMessages, result.limitHit, nil
 }
