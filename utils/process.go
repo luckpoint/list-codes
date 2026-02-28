@@ -18,8 +18,9 @@ func buildMarkdownOutput(directoryStructureMD string, depFileContents map[string
 		}
 	}
 
-	// Show Source Code Size Check section FIRST if we have collected files OR if we have skipped files
-	if hasSourceFiles || len(skippedFileMessages) > 0 {
+	// Show Source Code Size Check section only in debug mode.
+	// This keeps default output concise while preserving diagnostics when needed.
+	if debug && (hasSourceFiles || len(skippedFileMessages) > 0) {
 		outputMDParts = append(outputMDParts, "## Source Code Size Check\n")
 
 		// Add file size statistics
@@ -59,7 +60,7 @@ func buildMarkdownOutput(directoryStructureMD string, depFileContents map[string
 	// Add directory structure as SECOND section (after Source Code Size Check)
 	outputMDParts = append(outputMDParts, directoryStructureMD)
 
-	// Add source code language sections after directory structure
+	// Add source code files after directory structure (grouped internally by language for stable ordering)
 	if hasSourceFiles {
 		languages := make([]string, 0, len(sourceFileContents))
 		for lang := range sourceFileContents {
@@ -70,7 +71,6 @@ func buildMarkdownOutput(directoryStructureMD string, depFileContents map[string
 		sort.Strings(languages)
 
 		for _, lang := range languages {
-			outputMDParts = append(outputMDParts, fmt.Sprintf("### %s\n", lang))
 			sort.Strings(sourceFileContents[lang])
 			outputMDParts = append(outputMDParts, sourceFileContents[lang]...)
 		}

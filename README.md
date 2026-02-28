@@ -170,12 +170,12 @@ list-codes --exclude "**/*test*" --include ".github/workflows/**"
 
 ## Output Format
 
-**list-codes** generates a structured Markdown output with the following sections in order:
+**list-codes** generates a structured Markdown output with the following sections:
 
-1. **Source Code Size Check** - File statistics, size limits, and information about skipped files
-2. **Project Structure** - Directory tree visualization showing the project layout
-3. **Source Code Files** - Organized by programming language with syntax highlighting
-4. **Dependency and Configuration Files** - Package files, configs (shown in debug mode)
+1. **Project Structure** - Directory tree visualization showing the project layout
+2. **Source Code Files** - Organized by programming language with syntax highlighting
+3. **Dependency and Configuration Files** - Package files, configs (shown in debug mode)
+4. **Source Code Size Check** - File statistics, size limits, and skipped file information (shown in debug mode)
 
 ### File Size Management
 
@@ -193,7 +193,7 @@ All size parameters accept human-readable formats:
 - `--max-total-size`: Total collected files size limit (no limit by default)
 
 #### Size Check Output
-The **Source Code Size Check** section displays:
+The **Source Code Size Check** section (shown in `--debug` mode) displays:
 - Total size of collected files
 - Current size limits
 - List of skipped files (when files exceed limits)

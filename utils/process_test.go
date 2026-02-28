@@ -28,9 +28,11 @@ func TestBuildMarkdownOutput(t *testing.T) {
 				"## Project Structure",
 				"## Dependency and Configuration Files",
 				"## Source Code Size Check",
-				"### Go",
 				"### go.mod",
 				"### main.go",
+			},
+			expectedNotContains: []string{
+				"### Go",
 			},
 		},
 		{
@@ -39,8 +41,8 @@ func TestBuildMarkdownOutput(t *testing.T) {
 			depFileContents:      map[string][]string{},
 			sourceFileContents:   map[string][]string{"Go": {"### main.go"}},
 			debugMode:            false,
-			expectedContains:     []string{"## Project Structure", "## Source Code Size Check"},
-			expectedNotContains:  []string{"## Dependency and Configuration Files"},
+			expectedContains:     []string{"## Project Structure"},
+			expectedNotContains:  []string{"## Dependency and Configuration Files", "## Source Code Size Check"},
 		},
 	}
 
@@ -87,7 +89,6 @@ func TestProcessSourceFiles(t *testing.T) {
 				"## Project Structure",
 				"main.go",
 				"app.py",
-				"## Source Code Size Check",
 				"### main.go",
 				"```go\npackage main\nfunc main(){}\n```",
 				"### app.py",
@@ -95,6 +96,7 @@ func TestProcessSourceFiles(t *testing.T) {
 			},
 			expectedNotContains: []string{
 				"## Dependency and Configuration Files",
+				"## Source Code Size Check",
 			},
 		},
 		{
@@ -249,7 +251,7 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 				"helper_test.go",
 				"test_setup.py",
 			},
-			expectedNotContains: []string{},
+			expectedNotContains: []string{"## Source Code Size Check"},
 		},
 	}
 
@@ -275,6 +277,49 @@ func TestProcessSourceFilesWithIncludeTests(t *testing.T) {
 	}
 }
 
+func TestProcessSourceFiles_WithWhitelistGitignore_CollectsSourceContent(t *testing.T) {
+	tempDir := t.TempDir()
+
+	createTestFile(t, filepath.Join(tempDir, ".gitignore"), strings.Join([]string{
+		"*",
+		"!*/",
+		"!README.md",
+		"!src",
+		"!src/",
+		"!src/main.go",
+		"",
+	}, "\n"))
+
+	createTestFile(t, filepath.Join(tempDir, "README.md"), "# project")
+	createTestFile(t, filepath.Join(tempDir, "src", "main.go"), "package main\n\nfunc main() {}\n")
+
+	matcher, err := NewGitIgnoreMatcher(tempDir)
+	if err != nil {
+		t.Fatalf("NewGitIgnoreMatcher failed: %v", err)
+	}
+
+	output := ProcessSourceFiles(
+		tempDir,
+		10,
+		map[string]struct{}{},
+		map[string]struct{}{},
+		map[string]struct{}{},
+		false,
+		false,
+		matcher,
+	)
+
+	if !strings.Contains(output, "## Project Structure") {
+		t.Fatalf("expected output to include project structure, got:\n%s", output)
+	}
+	if !strings.Contains(output, "### src/main.go") {
+		t.Fatalf("expected output to include src/main.go content, got:\n%s", output)
+	}
+	if !strings.Contains(output, "```go\npackage main\n\nfunc main() {}\n\n```") {
+		t.Fatalf("expected output to include src/main.go code block, got:\n%s", output)
+	}
+}
+
 func TestBuildMarkdownOutputDeep(t *testing.T) {
 	tests := []struct {
 		name                 string
@@ -290,7 +335,7 @@ func TestBuildMarkdownOutputDeep(t *testing.T) {
 		checkSectionOrder    bool
 	}{
 		{
-			name:                 "With skipped files and size limit hit",
+			name:                 "With skipped files and size limit hit (default output hides size section)",
 			directoryStructureMD: "## Project Structure\n```\nproject/\n  file.go\n```",
 			depFileContents:      map[string][]string{},
 			sourceFileContents:   map[string][]string{"Go": {"### main.go\n```go\npackage main\n```"}},
@@ -299,18 +344,20 @@ func TestBuildMarkdownOutputDeep(t *testing.T) {
 			limitHit:             true,
 			debugMode:            false,
 			expectedContains: []string{
+				"## Project Structure",
+			},
+			expectedNotContains: []string{
 				"## Source Code Size Check",
-				"**File Statistics**: 1.00 MB collected",
+				"**File Statistics**:",
 				"**Skipped 2 file(s)",
 				"`large_file.go` (5.00 MB)",
 				"`huge_image.png` (10.50 MB)",
 				"scan stopped",
-				"## Project Structure",
 			},
-			checkSectionOrder: true,
+			checkSectionOrder: false,
 		},
 		{
-			name:                 "Order check: Size Check before Project Structure",
+			name:                 "Default output hides size check section",
 			directoryStructureMD: "## Project Structure\n```\nproject/\n```",
 			depFileContents:      map[string][]string{},
 			sourceFileContents:   map[string][]string{"Go": {"### main.go"}},
@@ -319,10 +366,12 @@ func TestBuildMarkdownOutputDeep(t *testing.T) {
 			limitHit:             false,
 			debugMode:            false,
 			expectedContains: []string{
-				"## Source Code Size Check",
 				"## Project Structure",
 			},
-			checkSectionOrder: true,
+			expectedNotContains: []string{
+				"## Source Code Size Check",
+			},
+			checkSectionOrder: false,
 		},
 		{
 			name:                 "Multiple language sections",
@@ -338,13 +387,17 @@ func TestBuildMarkdownOutputDeep(t *testing.T) {
 			limitHit:            false,
 			debugMode:           false,
 			expectedContains: []string{
+				"### main.go",
+				"### app.py",
+				"### script.js",
+			},
+			expectedNotContains: []string{
 				"## Source Code Size Check",
 				"### Go",
 				"### main.go",
 				"### Python",
 				"### app.py",
 				"### JavaScript",
-				"### script.js",
 			},
 		},
 		{
@@ -359,11 +412,12 @@ func TestBuildMarkdownOutputDeep(t *testing.T) {
 			expectedContains: []string{
 				"## Source Code Size Check",
 				"## Project Structure",
-				"### Go",
+				"### main.go",
 			},
 			expectedNotContains: []string{
-				// Note: Dependency section still appears in debug mode, just updated the test logic
+				"### Go",
 			},
+			checkSectionOrder: true,
 		},
 	}
 

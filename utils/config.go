@@ -149,7 +149,7 @@ var EXTENSIONS = map[string][]string{
 	"Crystal":      {".cr"},
 	"Groovy":       {".groovy", ".gvy"},
 	"PowerShell":   {".ps1", ".psm1", ".psd1"},
-	"Bash":         {".bash"},
+	"Bash":         {".bash", ".bats"},
 	"Zsh":          {".zsh"},
 	"Fish":         {".fish"},
 	"Tcl":          {".tcl"},

@@ -90,12 +90,12 @@ func TestShouldSkipDir(t *testing.T) {
 			reason:       "A parent of an included item must be traversed, so it should not be skipped.",
 		},
 		{
-			name:         "File Outside Include Scope (Additive Behavior)",
+			name:         "File Outside Include Scope (Include-Only Behavior)",
 			path:         "main.go",
 			isDir:        false,
 			includePaths: map[string]struct{}{abs("src"): {}},
-			wantSkip:     false,
-			reason:       "With additive include behavior, normal files should still be processed even when includes are active.",
+			wantSkip:     true,
+			reason:       "With include-only behavior, files outside include scope should be skipped.",
 		},
 		{
 			name:         "Exclude by Name",
@@ -137,25 +137,25 @@ func TestShouldSkipDir(t *testing.T) {
 			wantSkip:     false,
 			reason:       "An explicitly included nested dot-directory should not be skipped.",
 		},
-		// New test cases for additive behavior
+		// Include-only behavior cases
 		{
-			name:         "Additive: Normal File with Include Active",
+			name:         "Include-Only: Normal File with Include Active",
 			path:         "service.go",
 			isDir:        false,
 			includePaths: map[string]struct{}{abs(".env"): {}},
-			wantSkip:     false,
-			reason:       "Normal source files should still be processed when --include is active (additive behavior).",
+			wantSkip:     true,
+			reason:       "Normal source files outside include scope should be skipped when --include is active.",
 		},
 		{
-			name:         "Additive: Normal Directory with Include Active",
+			name:         "Include-Only: Normal Directory with Include Active",
 			path:         "src",
 			isDir:        true,
 			includePaths: map[string]struct{}{abs(".github"): {}},
-			wantSkip:     false,
-			reason:       "Normal directories should still be processed when --include is active (additive behavior).",
+			wantSkip:     true,
+			reason:       "Normal directories outside include scope should be skipped when --include is active.",
 		},
 		{
-			name:         "Additive: Dotfile Not Included with Include Active",
+			name:         "Include-Only: Dotfile Not Included with Include Active",
 			path:         ".dockerignore",
 			isDir:        false,
 			includePaths: map[string]struct{}{abs(".env"): {}},
@@ -163,7 +163,7 @@ func TestShouldSkipDir(t *testing.T) {
 			reason:       "Dotfiles not explicitly included should still be skipped even with --include active.",
 		},
 		{
-			name:         "Additive: Dot Directory Not Included with Include Active",
+			name:         "Include-Only: Dot Directory Not Included with Include Active",
 			path:         ".vscode",
 			isDir:        true,
 			includePaths: map[string]struct{}{abs(".github"): {}},
@@ -364,7 +364,7 @@ func TestGenerateDirectoryStructureWithIncludeTests(t *testing.T) {
 // Note: GitIgnore interaction tests are covered by existing gitignore_test.go
 // which already tests the interaction between includes and gitignore patterns
 
-func TestShouldSkipDirWithExcludeAndAdditive(t *testing.T) {
+func TestShouldSkipDirWithExcludeAndIncludeOnly(t *testing.T) {
 	projectRoot, cleanup := setupTestDir(t)
 	defer cleanup()
 
@@ -388,7 +388,7 @@ func TestShouldSkipDirWithExcludeAndAdditive(t *testing.T) {
 		reason       string
 	}{
 		{
-			name:         "Additive: Include vs Exclude Names - Exclude Wins",
+			name:         "Include-Only: Include vs Exclude Names - Exclude Wins",
 			path:         "src",
 			isDir:        true,
 			includePaths: map[string]struct{}{abs("src"): {}},
@@ -397,7 +397,7 @@ func TestShouldSkipDirWithExcludeAndAdditive(t *testing.T) {
 			reason:       "Exclude by name should override include (exclude has higher priority).",
 		},
 		{
-			name:         "Additive: Include vs Exclude Paths - Exclude Wins",
+			name:         "Include-Only: Include vs Exclude Paths - Exclude Wins",
 			path:         "src",
 			isDir:        true,
 			includePaths: map[string]struct{}{abs("src"): {}},
@@ -406,17 +406,17 @@ func TestShouldSkipDirWithExcludeAndAdditive(t *testing.T) {
 			reason:       "Exclude by path should override include (exclude has higher priority).",
 		},
 		{
-			name:         "Additive: Normal File with Excludes Active",
+			name:         "Include-Only: Normal File with Excludes Active",
 			path:         "main.go",
 			isDir:        false,
 			includePaths: map[string]struct{}{abs(".env"): {}},
 			excludeNames: map[string]struct{}{"vendor": {}},
 			excludePaths: map[string]struct{}{abs("node_modules"): {}},
-			wantSkip:     false,
-			reason:       "Normal files should not be affected by excludes that don't match them.",
+			wantSkip:     true,
+			reason:       "Normal files outside include scope should be skipped when includes are active.",
 		},
 		{
-			name:         "Additive: Included File with Different Exclude",
+			name:         "Include-Only: Included File with Different Exclude",
 			path:         ".env",
 			isDir:        false,
 			includePaths: map[string]struct{}{abs(".env"): {}},
@@ -426,7 +426,7 @@ func TestShouldSkipDirWithExcludeAndAdditive(t *testing.T) {
 			reason:       "Included files should not be affected by excludes that don't match them.",
 		},
 		{
-			name:         "Additive: Non-included Dotfile with Excludes Active",
+			name:         "Include-Only: Non-included Dotfile with Excludes Active",
 			path:         ".dockerignore",
 			isDir:        false,
 			includePaths: map[string]struct{}{abs(".env"): {}},
@@ -435,7 +435,7 @@ func TestShouldSkipDirWithExcludeAndAdditive(t *testing.T) {
 			reason:       "Non-included dotfiles should still be skipped by default dotfile rule.",
 		},
 		{
-			name:         "Additive: Multiple Excludes - Both Name and Path",
+			name:         "Include-Only: Multiple Excludes - Both Name and Path",
 			path:         "vendor",
 			isDir:        true,
 			includePaths: map[string]struct{}{abs("vendor"): {}, abs(".env"): {}},
@@ -445,7 +445,7 @@ func TestShouldSkipDirWithExcludeAndAdditive(t *testing.T) {
 			reason:       "Directory should be excluded when matched by both exclude name and path (exclude overrides include).",
 		},
 		{
-			name:         "Additive: Complex Priority Test",
+			name:         "Include-Only: Complex Priority Test",
 			path:         ".env",
 			isDir:        false,
 			includePaths: map[string]struct{}{abs(".env"): {}, abs(".github"): {}},
@@ -510,7 +510,7 @@ func TestShouldSkipDirWithExcludeAndAdditive(t *testing.T) {
 	}
 }
 
-func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
+func TestShouldSkipDirWithIncludeOnlyEdgeCases(t *testing.T) {
 	projectRoot, cleanup := setupTestDir(t)
 	defer cleanup()
 
@@ -534,7 +534,7 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 		reason       string
 	}{
 		{
-			name:         "Additive: Parent Directory Traversal - Parent of Nested Include",
+			name:         "Include-Only: Parent Directory Traversal - Parent of Nested Include",
 			path:         "src",
 			isDir:        true,
 			includePaths: map[string]struct{}{abs(filepath.Join("src", "api", "handler.go")): {}},
@@ -542,7 +542,7 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 			reason:       "Parent directories of included items must be traversed and should not be skipped.",
 		},
 		{
-			name:         "Additive: Parent Directory Traversal - Grandparent",
+			name:         "Include-Only: Parent Directory Traversal - Grandparent",
 			path:         ".",
 			isDir:        true,
 			includePaths: map[string]struct{}{abs(filepath.Join("src", "api", "handler.go")): {}},
@@ -550,7 +550,7 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 			reason:       "Grandparent directories of included items must be traversed and should not be skipped.",
 		},
 		{
-			name:         "Additive: Deep Nested Include - Intermediate Directory",
+			name:         "Include-Only: Deep Nested Include - Intermediate Directory",
 			path:         filepath.Join("src", "api"),
 			isDir:        true,
 			includePaths: map[string]struct{}{abs(filepath.Join("src", "api", "v1", "users.go")): {}},
@@ -558,31 +558,31 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 			reason:       "Intermediate directories in the path to included items should not be skipped.",
 		},
 		{
-			name:         "Additive: Sibling Directory of Included Path",
+			name:         "Include-Only: Sibling Directory of Included Path",
 			path:         filepath.Join("src", "lib"),
 			isDir:        true,
 			includePaths: map[string]struct{}{abs(filepath.Join("src", "api", "handler.go")): {}},
-			wantSkip:     false,
-			reason:       "Sibling directories should still be processed with additive behavior (not excluded).",
+			wantSkip:     true,
+			reason:       "Sibling directories should be skipped with include-only behavior.",
 		},
 		{
-			name:         "Additive: File in Sibling Directory",
+			name:         "Include-Only: File in Sibling Directory",
 			path:         filepath.Join("src", "lib", "utils.go"),
 			isDir:        false,
 			includePaths: map[string]struct{}{abs(filepath.Join("src", "api", "handler.go")): {}},
-			wantSkip:     false,
-			reason:       "Files in sibling directories should still be processed with additive behavior.",
+			wantSkip:     true,
+			reason:       "Files in sibling directories should be skipped with include-only behavior.",
 		},
 		{
-			name:         "Additive: Root Level File with Deep Include",
+			name:         "Include-Only: Root Level File with Deep Include",
 			path:         "main.go",
 			isDir:        false,
 			includePaths: map[string]struct{}{abs(filepath.Join("src", "api", "handler.go")): {}},
-			wantSkip:     false,
-			reason:       "Root level files should still be processed with additive behavior.",
+			wantSkip:     true,
+			reason:       "Root-level files outside include scope should be skipped with include-only behavior.",
 		},
 		{
-			name:         "Additive: Include Directory Itself",
+			name:         "Include-Only: Include Directory Itself",
 			path:         "src",
 			isDir:        true,
 			includePaths: map[string]struct{}{abs("src"): {}},
@@ -590,7 +590,7 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 			reason:       "Directory that exactly matches include path should not be skipped.",
 		},
 		{
-			name:         "Additive: Include File Itself",
+			name:         "Include-Only: Include File Itself",
 			path:         filepath.Join("src", "handler.go"),
 			isDir:        false,
 			includePaths: map[string]struct{}{abs(filepath.Join("src", "handler.go")): {}},
@@ -598,7 +598,7 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 			reason:       "File that exactly matches include path should not be skipped.",
 		},
 		{
-			name:         "Additive: Empty Include List",
+			name:         "Include-Only: Empty Include List",
 			path:         "main.go",
 			isDir:        false,
 			includePaths: map[string]struct{}{},
@@ -606,7 +606,7 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 			reason:       "With empty include list, normal files should not be skipped (default behavior).",
 		},
 		{
-			name:         "Additive: Dotfile with Empty Include List",
+			name:         "Include-Only: Dotfile with Empty Include List",
 			path:         ".env",
 			isDir:        false,
 			includePaths: map[string]struct{}{},
@@ -618,16 +618,16 @@ func TestShouldSkipDirWithAdditiveEdgeCases(t *testing.T) {
 			path:         "src-backup", // Should NOT match "src"
 			isDir:        true,
 			includePaths: map[string]struct{}{abs("src"): {}},
-			wantSkip:     false,
-			reason:       "Directory with similar name but not exact match should still be processed (additive behavior).",
+			wantSkip:     true,
+			reason:       "Directory with similar name but not exact match should be skipped.",
 		},
 		{
-			name:         "Additive: Case Sensitivity",
+			name:         "Include-Only: Case Sensitivity",
 			path:         "SRC",
 			isDir:        true,
 			includePaths: map[string]struct{}{abs("src"): {}},
-			wantSkip:     false,
-			reason:       "Case-different directory should still be processed with additive behavior (paths are case sensitive).",
+			wantSkip:     true,
+			reason:       "Case-different directory should be skipped with case-sensitive matching.",
 		},
 	}
 
@@ -924,6 +924,66 @@ func TestCollectSourceFilesWithIncludeTests(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCollectReadmeFiles_NoBlankLineBetweenHeaderAndCodeFence(t *testing.T) {
+	tempDir := t.TempDir()
+
+	readmePath := filepath.Join(tempDir, "README.md")
+	if err := os.WriteFile(readmePath, []byte("# Title\n"), 0644); err != nil {
+		t.Fatalf("Failed to create README.md: %v", err)
+	}
+
+	output := CollectReadmeFiles(
+		tempDir,
+		map[string]struct{}{},
+		map[string]struct{}{},
+		map[string]struct{}{},
+		false,
+		nil,
+	)
+
+	if !strings.Contains(output, "### README.md\n```markdown\n") {
+		t.Fatalf("expected header and code fence to be adjacent for README output, got:\n%s", output)
+	}
+	if strings.Contains(output, "### README.md\n\n```markdown\n") {
+		t.Fatalf("expected no blank line between header and code fence for README output, got:\n%s", output)
+	}
+}
+
+func TestCollectSourceFiles_NoBlankLineBetweenHeaderAndCodeFence(t *testing.T) {
+	tempDir := t.TempDir()
+
+	sourcePath := filepath.Join(tempDir, "main.go")
+	if err := os.WriteFile(sourcePath, []byte("package main\n"), 0644); err != nil {
+		t.Fatalf("Failed to create main.go: %v", err)
+	}
+
+	sourceFileContents, _, _, _ := collectSourceFiles(
+		tempDir,
+		[]string{"Go"},
+		map[string]int{"Go": 1},
+		map[string]struct{}{},
+		map[string]struct{}{},
+		map[string]struct{}{},
+		map[string]struct{}{},
+		false,
+		false,
+		nil,
+	)
+
+	var allOutput strings.Builder
+	for _, contents := range sourceFileContents {
+		allOutput.WriteString(strings.Join(contents, "\n"))
+	}
+	output := allOutput.String()
+
+	if !strings.Contains(output, "### main.go\n```go\n") {
+		t.Fatalf("expected header and code fence to be adjacent for source output, got:\n%s", output)
+	}
+	if strings.Contains(output, "### main.go\n\n```go\n") {
+		t.Fatalf("expected no blank line between header and code fence for source output, got:\n%s", output)
 	}
 }
 

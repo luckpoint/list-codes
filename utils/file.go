@@ -123,7 +123,7 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]st
 		if isExplicitlyIncluded {
 			return false
 		}
-		// Continue with normal default logic (don't skip unless other rules apply)
+		return true
 	}
 
 	// Priority 3: .gitignore matcher - skip files/directories matching .gitignore patterns.
@@ -138,6 +138,28 @@ func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]st
 	}
 
 	// If no rules caused a skip, process the item.
+	return false
+}
+
+func normalizeForPathMatch(path string) string {
+	return filepath.ToSlash(filepath.Clean(path))
+}
+
+func isSamePathOrChild(path, parent string) bool {
+	path = normalizeForPathMatch(path)
+	parent = strings.TrimSuffix(normalizeForPathMatch(parent), "/")
+	if path == parent {
+		return true
+	}
+	return strings.HasPrefix(path, parent+"/")
+}
+
+func isPathRelatedToIncludes(absPath string, includePaths map[string]struct{}) bool {
+	for incPath := range includePaths {
+		if isSamePathOrChild(incPath, absPath) || isSamePathOrChild(absPath, incPath) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -288,7 +310,7 @@ func CollectReadmeFiles(folderAbs string, includePaths map[string]struct{}, incl
 				fileDisplayName = path
 			}
 			fileDisplayName = filepath.ToSlash(fileDisplayName)
-			markdownContent := fmt.Sprintf("### %s\n\n```markdown\n%s\n```\n", fileDisplayName, string(content))
+			markdownContent := fmt.Sprintf("### %s\n```markdown\n%s\n```\n", fileDisplayName, string(content))
 			readmeFiles = append(readmeFiles, markdownContent)
 		}
 		return nil
@@ -427,7 +449,7 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		codeBlockLangHint := strings.ToLower(language)
 		codeBlockLangHint = strings.ReplaceAll(codeBlockLangHint, "/", "")
 		codeBlockLangHint = strings.ReplaceAll(codeBlockLangHint, "+", "p")
-		markdownContent := fmt.Sprintf("### %s\n\n```%s\n%s\n```\n", fileDisplayName, codeBlockLangHint, string(content))
+		markdownContent := fmt.Sprintf("### %s\n```%s\n%s\n```\n", fileDisplayName, codeBlockLangHint, string(content))
 		sourceFileContents[language] = append(sourceFileContents[language], markdownContent)
 		return nil
 	})

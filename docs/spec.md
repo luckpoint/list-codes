@@ -77,7 +77,7 @@ All size parameters accept human-readable formats:
   - Displays "scan stopped at X MB total limit" message
 
 ### 4.3 Size Reporting
-The **Source Code Size Check** section displays:
+The **Source Code Size Check** section is shown only in debug mode and displays:
 * Total size of collected files
 * Current size limits
 * List of skipped files with their sizes
@@ -88,10 +88,10 @@ The **Source Code Size Check** section displays:
 The generated Markdown output follows a structured format with sections in this order:
 
 ### 5.1 Section Order
-1. **Source Code Size Check** - File statistics, size limits, skipped files
-2. **Project Structure** - Directory tree visualization
-3. **Source Code Files** - Grouped by language with syntax highlighting
-4. **Dependency and Configuration Files** - Package files, configs (debug mode only)
+1. **Project Structure** - Directory tree visualization
+2. **Source Code Files** - Grouped by language with syntax highlighting
+3. **Dependency and Configuration Files** - Package files, configs (debug mode only)
+4. **Source Code Size Check** - File statistics, size limits, skipped files (debug mode only)
 
 ### 5.2 Content Organization
 * **Language grouping**: Source files are organized under `### Language` headings

@@ -122,6 +122,43 @@ node_modules/
 	}
 }
 
+func TestGitIgnoreMatcher_Match_RootNeverIgnored(t *testing.T) {
+	tempDir := t.TempDir()
+
+	gitignoreContent := `*
+!*/
+!README.md
+`
+	err := os.WriteFile(filepath.Join(tempDir, ".gitignore"), []byte(gitignoreContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create .gitignore file: %v", err)
+	}
+
+	readmePath := filepath.Join(tempDir, "README.md")
+	otherPath := filepath.Join(tempDir, "notes.txt")
+	if err := os.WriteFile(readmePath, []byte("readme"), 0644); err != nil {
+		t.Fatalf("Failed to create README: %v", err)
+	}
+	if err := os.WriteFile(otherPath, []byte("notes"), 0644); err != nil {
+		t.Fatalf("Failed to create notes file: %v", err)
+	}
+
+	matcher, err := NewGitIgnoreMatcher(tempDir)
+	if err != nil {
+		t.Fatalf("NewGitIgnoreMatcher failed: %v", err)
+	}
+
+	if matcher.Match(tempDir) {
+		t.Error("Repository root should never be ignored")
+	}
+	if matcher.Match(readmePath) {
+		t.Error("README.md should be unignored by negation pattern")
+	}
+	if !matcher.Match(otherPath) {
+		t.Error("notes.txt should be ignored by '*' pattern")
+	}
+}
+
 func TestGitIgnoreMatcher_Match_NestedGitignore(t *testing.T) {
 	// Create a temporary directory structure
 	tempDir := t.TempDir()
