@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/luckpoint/list-codes/tui"
 	"github.com/luckpoint/list-codes/utils"
 	"github.com/spf13/cobra"
 )
@@ -26,6 +27,8 @@ var (
 	maxFileSizeStr  string
 	maxTotalSizeStr string
 	noGitignore     bool
+	configFile      string
+	noConfig        bool
 )
 
 func init() {
@@ -66,11 +69,14 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "Show version information")
 	rootCmd.PersistentFlags().BoolVar(&includeTests, "include-tests", false, "Include test files in the output")
 	rootCmd.PersistentFlags().BoolVar(&noGitignore, "no-gitignore", false, "Disable .gitignore file processing")
+	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "Config file path (.list-codes.yaml)")
+	rootCmd.PersistentFlags().BoolVar(&noConfig, "no-config", false, "Disable auto-loading .list-codes.yaml")
 
 	// Register custom completion for --prompt flag
 	rootCmd.RegisterFlagCompletionFunc("prompt", promptCompletion)
 
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(selectCmd)
 }
 
 var rootCmd = &cobra.Command{
@@ -81,6 +87,38 @@ var rootCmd = &cobra.Command{
 		if versionFlag, _ := cmd.Flags().GetBool("version"); versionFlag {
 			fmt.Println("list-codes version", version)
 			return
+		}
+
+		// Auto-detect config file
+		if configFile == "" && !noConfig {
+			defaultCfg := filepath.Join(folder, ".list-codes.yaml")
+			if _, err := os.Stat(defaultCfg); err == nil {
+				configFile = defaultCfg
+			}
+		}
+
+		// Load config file if specified
+		if configFile != "" {
+			cfg, cfgErr := tui.LoadConfig(configFile)
+			if cfgErr != nil {
+				utils.PrintError(fmt.Sprintf("Could not load config '%s': %v", configFile, cfgErr))
+				os.Exit(1)
+			}
+			// Prepend config patterns (CLI flags take priority by being appended later)
+			includes = append(cfg.Include, includes...)
+			excludes = append(cfg.Exclude, excludes...)
+			// Apply options only when CLI flags are not explicitly set
+			if cfg.Options != nil {
+				if !cmd.Flags().Changed("include-tests") && cfg.Options.IncludeTests {
+					includeTests = true
+				}
+				if !cmd.Flags().Changed("max-file-size") && cfg.Options.MaxFileSize != "" {
+					maxFileSizeStr = cfg.Options.MaxFileSize
+				}
+				if !cmd.Flags().Changed("max-depth") && cfg.Options.MaxDepth > 0 {
+					maxDepth = cfg.Options.MaxDepth
+				}
+			}
 		}
 
 		// Parse size strings to bytes
@@ -259,6 +297,30 @@ var completionCmd = &cobra.Command{
 			cmd.Root().GenFishCompletion(os.Stdout, true)
 		case "powershell":
 			cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
+		}
+	},
+}
+
+var selectCmd = &cobra.Command{
+	Use:   "select [config-output-path]",
+	Short: "Open TUI to select files and save config",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		configPath := filepath.Join(folder, ".list-codes.yaml")
+		if len(args) > 0 {
+			configPath = args[0]
+		}
+
+		opts := tui.BuildTreeOpts{
+			IncludeTests:    includeTests,
+			MaxDepth:        maxDepth,
+			ExcludePatterns: excludes,
+			IncludePatterns: includes,
+		}
+
+		if err := tui.RunTUI(folder, configPath, noConfig, opts); err != nil {
+			utils.PrintError(fmt.Sprintf("TUI error: %v", err))
+			os.Exit(1)
 		}
 	},
 }
