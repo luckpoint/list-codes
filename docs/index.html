@@ -897,6 +897,7 @@
                 <li><a href="#filtering" data-scroll="filtering">Filtering</a></li>
                 <li><a href="#installation" data-scroll="installation">Installation</a></li>
                 <li><a href="#prompts" data-scroll="prompts">Prompts</a></li>
+                <li><a href="#config" data-scroll="config">Config</a></li>
                 <li><a href="#examples" data-scroll="examples">Examples</a></li>
             </ul>
             <button class="theme-toggle" aria-label="Toggle theme">🌙</button>
@@ -991,7 +992,15 @@
                         <p>Automatically excludes test files by default, with <code>--include-tests</code> option to include them when needed for comprehensive analysis.</p>
                     </div>
                     <div class="feature">
-                        <h3><span class="feature-icon">🎯</span>Structured Output</h3>
+                        <h3><span class="feature-icon">&#128196;</span>YAML Config File</h3>
+                        <p>Persist your include/exclude patterns and options in a <code>.list-codes.yaml</code> config file. Auto-loaded from project root, with CLI flags taking priority.</p>
+                    </div>
+                    <div class="feature">
+                        <h3><span class="feature-icon">&#127912;</span>Interactive File Selector</h3>
+                        <p>Use <code>list-codes select</code> to open a TUI for browsing your project tree and toggling file selection. Saves results as a reusable config file.</p>
+                    </div>
+                    <div class="feature">
+                        <h3><span class="feature-icon">&#127919;</span>Structured Output</h3>
                         <p>Generates organized Markdown with Source Code Size Check, Project Structure, Source Files, and Configuration sections in logical order.</p>
                     </div>
                 </div>
@@ -1261,11 +1270,18 @@
 --max-depth       <span class="string">Max depth for directory structure (default: 7)</span>
 --include-tests   <span class="string">Include test files in the output (excluded by default)</span>
 
+<span class="comment"># Configuration options</span>
+--config, -c      <span class="string">Config file path (.list-codes.yaml)</span>
+--no-config       <span class="string">Disable auto-loading .list-codes.yaml</span>
+
 <span class="comment"># Other options</span>
 --debug           <span class="string">Enable debug mode</span>
 --lang            <span class="string">Force language (ja|en) instead of auto-detection</span>
 --version, -v     <span class="string">Show version information</span>
---help, -h        <span class="string">Show help message</span></code></pre>
+--help, -h        <span class="string">Show help message</span>
+
+<span class="comment"># Subcommands</span>
+select            <span class="string">Open TUI to interactively select files and save config</span></code></pre>
                 </div>
             </section>
 
@@ -1343,6 +1359,50 @@
 
 <span class="comment"># Save analysis with custom prompt to file</span>
 <span class="keyword">list-codes</span> --prompt <span class="string">"Code review focusing on error handling"</span> --output review.md</code></pre>
+                </div>
+            </section>
+
+            <section class="section" id="config">
+                <h2>&#9881;&#65039; Configuration File</h2>
+                <p>
+                    <strong>list-codes</strong> supports a <code>.list-codes.yaml</code> configuration file for persisting include/exclude patterns and options. It is auto-loaded from your project root by default.
+                </p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">.list-codes.yaml Example</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre><code><span class="comment"># Include/exclude patterns</span>
+<span class="keyword">include</span>:
+  - <span class="string">"src/**"</span>
+  - <span class="string">"pkg/**"</span>
+<span class="keyword">exclude</span>:
+  - <span class="string">"**/*.generated.go"</span>
+
+<span class="comment"># Options (overridden by CLI flags when explicitly set)</span>
+<span class="keyword">options</span>:
+  <span class="keyword">include-tests</span>: <span class="string">false</span>
+  <span class="keyword">max-file-size</span>: <span class="string">"1m"</span>
+  <span class="keyword">max-depth</span>: <span class="string">7</span></code></pre>
+                </div>
+                <p>
+                    CLI flags take priority over config file values. Use <code>--no-config</code> to disable auto-loading, or <code>--config path</code> to specify a custom config file.
+                </p>
+
+                <h3>Interactive File Selector (<code>select</code> subcommand)</h3>
+                <p>
+                    The <code>select</code> subcommand opens a TUI (Terminal User Interface) to interactively browse your project tree and select files. The selection is saved as a <code>.list-codes.yaml</code> config file.
+                </p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">TUI Select Usage</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre><code><span class="comment"># Open interactive file selector (saves to .list-codes.yaml)</span>
+<span class="keyword">list-codes</span> select
+
+<span class="comment"># Specify output config path</span>
+<span class="keyword">list-codes</span> select ./my-config.yaml</code></pre>
                 </div>
             </section>
 

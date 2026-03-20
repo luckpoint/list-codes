@@ -1,6 +1,6 @@
 # list-codes Specification
 
-_Last updated: 2025-07-30_
+_Last updated: 2026-03-20_
 
 This document describes how `list-codes` determines what to include in the generated documentation/output and details the current implementation behavior.
 
@@ -118,16 +118,68 @@ The filtering system follows a clear priority hierarchy:
 ## 7. Processing Flow
 
 1. **Initialize configuration** - Parse CLI flags, set size limits
-2. **Load .gitignore rules** - Parse .gitignore files in project hierarchy (unless `--no-gitignore` is set)
-3. **Language detection** - Scan for signatures, count extensions
-4. **Directory structure** - Generate tree visualization
-5. **Dependency collection** - Collect config files (debug mode)
-6. **Source collection** - Collect source files with size tracking
-7. **Output generation** - Build structured Markdown output
+2. **Load config file** - Auto-load `.list-codes.yaml` (unless `--no-config` is set)
+3. **Load .gitignore rules** - Parse .gitignore files in project hierarchy (unless `--no-gitignore` is set)
+4. **Language detection** - Scan for signatures, count extensions
+5. **Directory structure** - Generate tree visualization
+6. **Dependency collection** - Collect config files (debug mode)
+7. **Source collection** - Collect source files with size tracking
+8. **Output generation** - Build structured Markdown output
 
 ---
 
-> **Implementation Notes**: 
+## 8. Configuration File (`.list-codes.yaml`)
+
+### 8.1 Auto-loading
+* When no `--config` flag is provided and `--no-config` is not set, the tool looks for `.list-codes.yaml` in the scan folder
+* If found, it is automatically loaded before CLI flags are processed
+
+### 8.2 Config Structure
+```yaml
+include:
+  - "src/**"
+  - "pkg/**"
+exclude:
+  - "**/*.generated.go"
+options:
+  include-tests: false
+  max-file-size: "1m"
+  max-depth: 7
+```
+
+### 8.3 Priority
+* Config file patterns are prepended to CLI flag values (CLI flags take priority)
+* Config `options` are applied only when the corresponding CLI flag is not explicitly set
+
+### 8.4 Related CLI Flags
+* `--config`, `-c`: Explicit config file path
+* `--no-config`: Disable auto-loading
+
+## 9. Interactive File Selector (`select` subcommand)
+
+The `select` subcommand provides a TUI (bubbletea-based) for interactively browsing the project tree and toggling file selection. The result is saved as a `.list-codes.yaml` config file.
+
+### 9.1 Usage
+```bash
+list-codes select [config-output-path]
+```
+* Default output path: `.list-codes.yaml` in the scan folder
+* Respects `--folder`, `--include`, `--exclude`, `--include-tests`, `--max-depth` flags
+
+### 9.2 Tree Building
+* Uses `tui.BuildTree()` which calls `utils.ShouldSkipEntry()` for filtering
+* Sorts entries: directories first, then alphabetical (case-insensitive)
+* Respects `.gitignore` and default exclusions
+
+### 9.3 State Management
+* Three states: `Unchecked`, `Checked`, `Partial`
+* Toggling a directory recursively toggles all children
+* Parent state is recalculated automatically (all checked / all unchecked / partial)
+
+---
+
+> **Implementation Notes**:
 > - The `ParseSize()` function in `utils/utils.go` handles human-readable size parsing
 > - File size tracking uses `errTotalSizeLimitExceeded` for total limit enforcement
-> - Test detection logic is implemented in `IsTestFile()` with debug logging support 
+> - Test detection logic is implemented in `IsTestFile()` with debug logging support
+> - `ShouldSkipEntry()` is exported for reuse in the `tui` package

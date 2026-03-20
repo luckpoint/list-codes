@@ -235,11 +235,45 @@ list-codes --include-tests
 - `--max-depth`: Max depth for directory structure (default: 7)
 - `--include-tests`: Include test files in the output (excluded by default)
 
+#### Configuration Options
+- `--config`, `-c`: Config file path (`.list-codes.yaml`)
+- `--no-config`: Disable auto-loading `.list-codes.yaml`
+
 #### Other Options
 - `--debug`: Enable debug mode
 - `--lang`: Force language (ja|en) instead of auto-detection
 - `--version`, `-v`: Show version information
 - `--help`, `-h`: Show help message
+
+## Configuration File (`.list-codes.yaml`)
+
+You can create a `.list-codes.yaml` file in your project root to persist include/exclude patterns and options. This file is auto-loaded by default.
+
+```yaml
+include:
+  - "src/**"
+  - "pkg/**"
+exclude:
+  - "**/*.generated.go"
+options:
+  include-tests: false
+  max-file-size: "1m"
+  max-depth: 7
+```
+
+CLI flags take priority over config file values. Use `--no-config` to disable auto-loading.
+
+### Interactive File Selector (`select` subcommand)
+
+The `select` subcommand opens a TUI (Terminal User Interface) to interactively browse your project tree and select files. The selection is saved as a `.list-codes.yaml` config file.
+
+```bash
+# Open interactive file selector
+list-codes select
+
+# Specify output config path
+list-codes select ./my-config.yaml
+```
 
 ## Build
 
