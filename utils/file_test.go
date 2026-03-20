@@ -250,10 +250,10 @@ func TestShouldSkipDir(t *testing.T) {
 			}
 			includeMatcher, _ := NewSimpleMatcher(projectRoot, includePatterns)
 
-			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, includeMatcher, tc.excludeNames, excludeMatcher, nil)
+			gotSkip := ShouldSkipEntry(fullPath, name, tc.isDir, tc.includePaths, includeMatcher, tc.excludeNames, excludeMatcher, nil)
 
 			if gotSkip != tc.wantSkip {
-				t.Errorf("shouldSkipDir() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
+				t.Errorf("ShouldSkipEntry() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
 			}
 		})
 	}
@@ -501,10 +501,10 @@ func TestShouldSkipDirWithExcludeAndIncludeOnly(t *testing.T) {
 			}
 			includeMatcher, _ := NewSimpleMatcher(projectRoot, includePatterns)
 
-			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, includeMatcher, tc.excludeNames, excludeMatcher, nil)
+			gotSkip := ShouldSkipEntry(fullPath, name, tc.isDir, tc.includePaths, includeMatcher, tc.excludeNames, excludeMatcher, nil)
 
 			if gotSkip != tc.wantSkip {
-				t.Errorf("shouldSkipDir() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
+				t.Errorf("ShouldSkipEntry() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
 			}
 		})
 	}
@@ -676,10 +676,10 @@ func TestShouldSkipDirWithIncludeOnlyEdgeCases(t *testing.T) {
 			}
 			includeMatcher, _ := NewSimpleMatcher(projectRoot, includePatterns)
 
-			gotSkip := shouldSkipDir(fullPath, name, tc.isDir, tc.includePaths, includeMatcher, tc.excludeNames, excludeMatcher, nil)
+			gotSkip := ShouldSkipEntry(fullPath, name, tc.isDir, tc.includePaths, includeMatcher, tc.excludeNames, excludeMatcher, nil)
 
 			if gotSkip != tc.wantSkip {
-				t.Errorf("shouldSkipDir() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
+				t.Errorf("ShouldSkipEntry() for '%s' returned skip=%v, want %v. Reason: %s", tc.path, gotSkip, tc.wantSkip, tc.reason)
 			}
 		})
 	}

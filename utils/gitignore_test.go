@@ -326,19 +326,19 @@ build/
 	includeMatcher, _ := NewSimpleMatcher(tempDir, includePatterns)
 
 	// Test that --include overrides .gitignore rules (Priority 2 > Priority 3)
-	shouldSkip := shouldSkipDir(buildFile, "output.txt", false, includePaths, includeMatcher, excludeNames, nil, matcher)
+	shouldSkip := ShouldSkipEntry(buildFile, "output.txt", false, includePaths, includeMatcher, excludeNames, nil, matcher)
 	if shouldSkip {
 		t.Errorf("File explicitly included via --include should not be skipped even if it matches .gitignore")
 	}
 
 	// Test that files not in --include are still subject to .gitignore rules
-	shouldSkip = shouldSkipDir(logFile, "test.log", false, includePaths, includeMatcher, excludeNames, nil, matcher)
+	shouldSkip = ShouldSkipEntry(logFile, "test.log", false, includePaths, includeMatcher, excludeNames, nil, matcher)
 	if !shouldSkip {
 		t.Errorf("File matching .gitignore and not in --include should be skipped")
 	}
 
 	// Test normal file not in .gitignore and not in --include (should be skipped in include-only mode)
-	shouldSkip = shouldSkipDir(normalFile, "main.go", false, includePaths, includeMatcher, excludeNames, nil, matcher)
+	shouldSkip = ShouldSkipEntry(normalFile, "main.go", false, includePaths, includeMatcher, excludeNames, nil, matcher)
 	if !shouldSkip {
 		t.Errorf("Normal file should be skipped when --include is active (include-only behavior)")
 	}

@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+.list-codes.yaml
 /list-codes
 
 # Test binary, built with `go test -c`

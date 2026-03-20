@@ -73,7 +73,7 @@ func IsAssetFile(filePath string, debug bool) bool {
 	return false
 }
 
-// shouldSkipDir determines whether to skip directories or files based on a set of rules.
+// ShouldSkipEntry determines whether to skip directories or files based on a set of rules.
 // The logic prioritizes user intent with include-only behavior when --include is set:
 //  1. User-defined exclusions (--exclude) always result in a skip.
 //  2. If --include is used, items matching include patterns override default exclusions.
@@ -81,7 +81,7 @@ func IsAssetFile(filePath string, debug bool) bool {
 //  3. .gitignore matcher (if provided) - files/dirs matching .gitignore patterns are skipped.
 //  4. Any item starting with a '.' is skipped by default (unless explicitly included).
 //  5. If --include is active, non-whitelisted items are skipped.
-func shouldSkipDir(fullPath, name string, isDir bool, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, gi *GitIgnoreMatcher) bool {
+func ShouldSkipEntry(fullPath, name string, isDir bool, includePaths map[string]struct{}, includeMatcher *SimpleMatcher, excludeNames map[string]struct{}, excludeMatcher *SimpleMatcher, gi *GitIgnoreMatcher) bool {
 	absPath, err := filepath.Abs(fullPath)
 	if err != nil {
 		PrintWarning(fmt.Sprintf("Could not get absolute path for %s: %v", fullPath, err), true)
@@ -220,7 +220,7 @@ func GenerateDirectoryStructure(startPath string, maxDepth int, debugMode bool, 
 		var filteredEntries []os.DirEntry
 		for _, entry := range entries {
 			itemPath := filepath.Join(currentPath, entry.Name())
-			if shouldSkipDir(itemPath, entry.Name(), entry.IsDir(), includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
+			if ShouldSkipEntry(itemPath, entry.Name(), entry.IsDir(), includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 				continue
 			}
 			// Skip test files from directory structure
@@ -319,14 +319,14 @@ func CollectReadmeFiles(folderAbs string, includePaths map[string]struct{}, incl
 		}
 
 		if d.IsDir() {
-			if shouldSkipDir(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
+			if ShouldSkipEntry(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
 		if strings.ToLower(d.Name()) == "readme.md" {
-			if shouldSkipDir(path, d.Name(), false, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
+			if ShouldSkipEntry(path, d.Name(), false, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 				return nil
 			}
 
@@ -380,13 +380,13 @@ func collectSourceFiles(folderAbs string, primaryLangs []string, fallbackLangs m
 		}
 
 		if d.IsDir() {
-			if shouldSkipDir(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
+			if ShouldSkipEntry(path, d.Name(), true, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		if shouldSkipDir(path, d.Name(), false, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
+		if ShouldSkipEntry(path, d.Name(), false, includePaths, includeMatcher, excludeNames, excludeMatcher, gi) {
 			return nil
 		}
 
