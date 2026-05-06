@@ -64,6 +64,33 @@ func TestBuildMarkdownOutput(t *testing.T) {
 	}
 }
 
+func TestBuildMarkdownOutput_DebugSkippedFilesAreSorted(t *testing.T) {
+	output := buildMarkdownOutput(
+		"## Project Structure\n```text\n. (repo)\n```",
+		map[string][]string{},
+		map[string][]string{"Go": {"### main.go\n```go\npackage main\n```"}},
+		2*1024*1024,
+		[]string{"`z.go` (2.00 MB)", "`a.go` (2.00 MB)"},
+		true,
+		true,
+	)
+
+	if !strings.Contains(output, "scan stopped at") {
+		t.Fatalf("expected debug output to mention total-size limit, got:\n%s", output)
+	}
+	if !strings.Contains(output, "**Skipped 2 file(s)") {
+		t.Fatalf("expected skipped file count in debug output, got:\n%s", output)
+	}
+	aIndex := strings.Index(output, "`a.go`")
+	zIndex := strings.Index(output, "`z.go`")
+	if aIndex == -1 || zIndex == -1 {
+		t.Fatalf("expected both skipped files in output, got:\n%s", output)
+	}
+	if aIndex > zIndex {
+		t.Fatalf("expected skipped files to be sorted, got:\n%s", output)
+	}
+}
+
 // TestProcessSourceFiles はProcessSourceFiles関数のユニットテストです。
 func TestProcessSourceFiles(t *testing.T) {
 	tests := []struct {

@@ -3,9 +3,11 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/luckpoint/list-codes/utils"
+	"github.com/spf13/cobra"
 )
 
 func TestResolvePathPatternsGlob(t *testing.T) {
@@ -76,5 +78,31 @@ func TestResolvePathPatternsNoMatchKeepsLiteralPattern(t *testing.T) {
 
 	if _, ok := got[expectedLiteralAbs]; !ok {
 		t.Fatalf("expected unresolved glob pattern to be kept as literal include path")
+	}
+}
+
+func TestJoinSetSortsKeys(t *testing.T) {
+	got := joinSet(map[string]struct{}{
+		"zeta":  {},
+		"alpha": {},
+		"beta":  {},
+	})
+
+	if got != "alpha, beta, zeta" {
+		t.Fatalf("joinSet returned %q, want sorted keys", got)
+	}
+}
+
+func TestPromptCompletionReturnsSortedPromptNames(t *testing.T) {
+	got, directive := promptCompletion(nil, nil, "")
+
+	if directive != cobra.ShellCompDirectiveNoFileComp {
+		t.Fatalf("promptCompletion directive = %v, want %v", directive, cobra.ShellCompDirectiveNoFileComp)
+	}
+	if !slices.IsSorted(got) {
+		t.Fatalf("promptCompletion returned unsorted names: %#v", got)
+	}
+	if len(got) == 0 {
+		t.Fatalf("promptCompletion returned no prompt names")
 	}
 }

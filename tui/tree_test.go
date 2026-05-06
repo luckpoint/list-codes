@@ -3,6 +3,7 @@ package tui
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,6 +39,18 @@ func createTestProject(t *testing.T) string {
 	return dir
 }
 
+func findTreeNode(root *TreeNode, path string) *TreeNode {
+	if root.Path == path {
+		return root
+	}
+	for _, child := range root.Children {
+		if found := findTreeNode(child, path); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
 func TestBuildTree(t *testing.T) {
 	dir := createTestProject(t)
 
@@ -54,6 +67,17 @@ func TestBuildTree_InvalidDir(t *testing.T) {
 	// BuildTree itself doesn't error on nonexistent because os.ReadDir fails gracefully
 	// But it should still return a root node
 	assert.NoError(t, err)
+}
+
+func TestBuildTree_MaxDepth(t *testing.T) {
+	dir := createTestProject(t)
+
+	root, err := BuildTree(dir, BuildTreeOpts{MaxDepth: 1})
+	require.NoError(t, err)
+
+	src := findTreeNode(root, "src")
+	require.NotNil(t, src)
+	assert.Empty(t, src.Children, "children deeper than MaxDepth should not be loaded")
 }
 
 func TestFlattenVisible(t *testing.T) {
@@ -298,5 +322,83 @@ func TestApplyConfig(t *testing.T) {
 		if child.IsDir && child.Name == "src" {
 			assert.NotEqual(t, Unchecked, child.State)
 		}
+	}
+}
+
+func TestApplyConfig_ExcludeOverridesInclude(t *testing.T) {
+	dir := createTestProject(t)
+
+	root, err := BuildTree(dir, BuildTreeOpts{})
+	require.NoError(t, err)
+
+	ApplyConfig(root, &Config{
+		Include: []string{"src/**"},
+		Exclude: []string{"src/main.go"},
+	})
+
+	mainGo := findTreeNode(root, "src/main.go")
+	utilGo := findTreeNode(root, "src/pkg/util.go")
+	require.NotNil(t, mainGo)
+	require.NotNil(t, utilGo)
+
+	assert.Equal(t, Unchecked, mainGo.State)
+	assert.Equal(t, Checked, utilGo.State)
+}
+
+func TestGeneratePatterns_CollapsesCheckedDirectory(t *testing.T) {
+	dir := createTestProject(t)
+
+	root, err := BuildTree(dir, BuildTreeOpts{})
+	require.NoError(t, err)
+
+	SetAllState(root, Unchecked)
+	src := findTreeNode(root, "src")
+	require.NotNil(t, src)
+	Toggle(src)
+
+	includes, excludes := GeneratePatterns(root)
+
+	assert.Contains(t, includes, "src/**")
+	assert.Empty(t, excludes)
+	assert.False(t, slices.Contains(includes, "src/main.go"), "checked directories should be represented by a single glob")
+}
+
+func TestMatchGlobDoubleStar(t *testing.T) {
+	testCases := []struct {
+		name    string
+		pattern string
+		path    string
+		want    bool
+	}{
+		{
+			name:    "matches root-level file",
+			pattern: "**/*.go",
+			path:    "main.go",
+			want:    true,
+		},
+		{
+			name:    "matches nested file",
+			pattern: "**/*.go",
+			path:    "src/pkg/util.go",
+			want:    true,
+		},
+		{
+			name:    "respects fixed prefix",
+			pattern: "src/**/*.go",
+			path:    "cmd/root.go",
+			want:    false,
+		},
+		{
+			name:    "rejects wrong extension",
+			pattern: "src/**/*.go",
+			path:    "src/README.md",
+			want:    false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, matchGlob(tc.pattern, tc.path))
+		})
 	}
 }
