@@ -34,3 +34,9 @@ godoc/
 
 # Added by goreleaser init:
 dist/
+
+# Gemini CLI config
+.gemini/
+
+# Deno config
+deno.json
