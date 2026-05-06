@@ -1,4 +1,4 @@
-![list-codes-logo](https://github.com/user-attachments/assets/2668fa42-2bec-4426-91f0-72c04536aa8f)
+![list-codes-banner](assets/banner.png)
 
 # list-codes - Source Code Analysis Assistant for LLMs
 
@@ -307,4 +307,4 @@ go tool cover -html=coverage.out -o coverage.html
 
 ## License
 
-This project is released under the MIT License.
+This project is released under the MIT License.y
